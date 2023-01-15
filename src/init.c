@@ -13,20 +13,20 @@
 
 /* 0000f7c8 0000f808 */ SInt32 snd_SystemRunning() {}
 /* 0000f808 0000fb64 */ SInt32 snd_StartSoundSystemEx(/* 0x0(sp) */ UInt32 flags) {
-	/* -0x18(sp) */ SInt32 ret;
-	/* -0x14(sp) */ SInt32 i;
-	/* -0x10(sp) */ UInt16 val;
+    /* -0x18(sp) */ SInt32 ret;
+    /* -0x14(sp) */ SInt32 i;
+    /* -0x10(sp) */ UInt16 val;
 }
 
 /* 0000fb64 0000fd00 */ SInt32 snd_InstallSoundTick() {
-	/* -0x38(sp) */ int ret;
-	/* -0x34(sp) */ SysClock clock;
-	/* -0x2c(sp) */ ThreadParam param;
-	/* -0x18(sp) */ SemaParam sema;
+    /* -0x38(sp) */ int ret;
+    /* -0x34(sp) */ SysClock clock;
+    /* -0x2c(sp) */ ThreadParam param;
+    /* -0x18(sp) */ SemaParam sema;
 }
 
 /* 0000fd00 0000fda8 */ void snd_RemoveSoundTick() {
-	/* -0x10(sp) */ SInt32 ret;
+    /* -0x10(sp) */ SInt32 ret;
 }
 
 /* 0000fda8 0000fed8 */ SInt32 snd_StopSoundSystem() {}

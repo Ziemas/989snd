@@ -14,7 +14,7 @@
 /* data 133c */ SInt32 gDoneDMASema = 0;
 /* data 1340 */ SInt32 gWaitingDMAComplete = 0;
 
-/* 0000ff74 00010008 */ SInt32 snd_TimerLLTick(/* 0x0(sp) */ struct timercommon* common) {}
-/* 00010008 000100e0 */ int snd_TransCallback(/* 0x0(sp) */ SInt32 ch, /* 0x4(sp) */ void* data) {}
+/* 0000ff74 00010008 */ SInt32 snd_TimerLLTick(/* 0x0(sp) */ struct timercommon *common) {}
+/* 00010008 000100e0 */ int snd_TransCallback(/* 0x0(sp) */ SInt32 ch, /* 0x4(sp) */ void *data) {}
 /* 000100e0 00010164 */ void snd_DoneVAGReadCB(/* 0x0(sp) */ SInt32 code) {}
-/* 00010164 0001022c */ int snd_VAGDMADone0(/* 0x0(sp) */ int ch, /* 0x4(sp) */ void* data) {}
+/* 00010164 0001022c */ int snd_VAGDMADone0(/* 0x0(sp) */ int ch, /* 0x4(sp) */ void *data) {}

@@ -1,7 +1,23 @@
 #ifndef TYPES_H_
 #define TYPES_H_
-#include "stddef.h"
 #include "stdbool.h"
+#include "stddef.h"
+
+#include <cdvdman.h>
+#include <sifman.h>
+#include <sifrpc.h>
+#include <thbase.h>
+#include <thsemap.h>
+
+typedef iop_sys_clock_t SysClock;
+typedef iop_thread_t ThreadParam;
+typedef iop_thread_info_t ThreadInfo;
+typedef iop_sema_t SemaParam;
+typedef SifRpcServerData_t sceSifServeData;
+typedef SifRpcReceiveData_t sceSifReceiveData;
+typedef SifRpcDataQueue_t sceSifQueueData;
+typedef SifDmaTransfer_t sceSifDmaData;
+
 typedef char SInt8;
 typedef unsigned char UInt8;
 typedef short int SInt16;
@@ -52,11 +68,11 @@ typedef struct { // 0x18
     /* 0x0a */ UInt16 ADSR1;
     /* 0x0c */ UInt16 ADSR2;
     /* 0x0e */ SInt16 Flags;
-    /* 0x10 */ void* VAGInSR;
+    /* 0x10 */ void *VAGInSR;
     /* 0x14 */ UInt32 reserved1;
 } Tone;
 
-typedef Tone* TonePtr;
+typedef Tone *TonePtr;
 
 typedef struct { // 0x8
     /* 0x0 */ SInt8 NumTones;
@@ -65,14 +81,14 @@ typedef struct { // 0x8
     /* 0x4 */ TonePtr FirstTone;
 } Prog;
 
-typedef Prog* ProgPtr;
+typedef Prog *ProgPtr;
 
 struct SoundBank_tag;
 
 typedef struct { // 0x1c
     /* 0x00 */ SInt32 Type;
-    /* 0x04 */ SoundBank_tag* Bank;
-    /* 0x08 */ void* OrigBank;
+    /* 0x04 */ struct SoundBank_tag *Bank;
+    /* 0x08 */ void *OrigBank;
     /* 0x0c */ SInt8 OrigType;
     /* 0x0d */ SInt8 Prog;
     /* 0x0e */ SInt8 Note;
@@ -87,20 +103,20 @@ typedef struct { // 0x1c
     /* 0x1a */ UInt16 pad3;
 } Sound;
 
-typedef Sound* SoundPtr;
+typedef Sound *SoundPtr;
 
 typedef struct { // 0x1c
     /* 0x00 */ SInt32 Type;
-    /* 0x04 */ SoundBank_tag* Bank;
+    /* 0x04 */ struct SoundBank_tag *Bank;
     /* 0x08 */ SInt8 IDs[20];
 } CompoundSound;
 
-typedef CompoundSound* CompoundSoundPtr;
+typedef CompoundSound *CompoundSoundPtr;
 
 typedef struct { // 0x1c
     /* 0x00 */ SInt32 Type;
-    /* 0x04 */ SoundBank_tag* Bank;
-    /* 0x08 */ void* OrigBank;
+    /* 0x04 */ struct SoundBank_tag *Bank;
+    /* 0x08 */ void *OrigBank;
     /* 0x0c */ UInt32 MIDIID;
     /* 0x10 */ SInt16 Vol;
     /* 0x12 */ SInt8 Repeats;
@@ -108,10 +124,10 @@ typedef struct { // 0x1c
     /* 0x14 */ SInt16 Pan;
     /* 0x16 */ SInt8 Index;
     /* 0x17 */ UInt8 Flags;
-    /* 0x18 */ void* MIDIBlock;
+    /* 0x18 */ void *MIDIBlock;
 } MIDISound;
 
-typedef MIDISound* MIDISoundPtr;
+typedef MIDISound *MIDISoundPtr;
 
 struct SoundBank_tag { // 0x34
     /* 0x00 */ UInt32 DataID;
@@ -128,13 +144,13 @@ struct SoundBank_tag { // 0x34
     /* 0x1c */ SoundPtr FirstSound;
     /* 0x20 */ ProgPtr FirstProg;
     /* 0x24 */ TonePtr FirstTone;
-    /* 0x28 */ void* VagsInSR;
+    /* 0x28 */ void *VagsInSR;
     /* 0x2c */ UInt32 VagDataSize;
-    /* 0x30 */ SoundBank_tag* NextBank;
+    /* 0x30 */ struct SoundBank_tag *NextBank;
 };
 
-typedef SoundBank_tag SoundBank;
-typedef SoundBank_tag* SoundBankPtr;
+typedef struct SoundBank_tag SoundBank;
+typedef struct SoundBank_tag *SoundBankPtr;
 
 struct LFOTracker { // 0x30
     /* 0x00 */ UInt16 type;
@@ -151,8 +167,8 @@ struct LFOTracker { // 0x30
     /* 0x1c */ SInt32 state_hold2;
     /* 0x20 */ SInt32 range;
     /* 0x24 */ SInt32 last_lfo;
-    /* 0x28 */ struct BlockSoundHandler* handler;
-    /* 0x2c */ LFOTracker* next;
+    /* 0x28 */ struct BlockSoundHandler *handler;
+    /* 0x2c */ struct LFOTracker *next;
 };
 
 typedef struct { // 0x20
@@ -214,10 +230,10 @@ union GrainParams { // 0x20
 typedef struct { // 0x28
     /* 0x00 */ UInt32 Type;
     /* 0x04 */ SInt32 Delay;
-    /* 0x08 */ GrainParams Params;
+    /* 0x08 */ union GrainParams Params;
 } SFXGrain;
 
-typedef SFXGrain* SFXGrainPtr;
+typedef SFXGrain *SFXGrainPtr;
 
 struct _opd1 { // 0x4
     /* 0x0 */ SInt8 Arg[3];
@@ -225,16 +241,16 @@ struct _opd1 { // 0x4
 };
 
 union _op_data { // 0x4
-    /* 0x0 */ _opd1 MicroOp;
+    /* 0x0 */ struct _opd1 MicroOp;
     /* 0x0 */ UInt32 Opcode;
 };
 
 typedef struct { // 0x8
-    /* 0x0 */ _op_data OpcodeData;
+    /* 0x0 */ union _op_data OpcodeData;
     /* 0x4 */ SInt32 Delay;
 } SFXGrain2;
 
-typedef SFXGrain2* SFXGrain2Ptr;
+typedef SFXGrain2 *SFXGrain2Ptr;
 
 typedef struct { // 0xc
     /* 0x0 */ SInt8 Vol;
@@ -246,7 +262,7 @@ typedef struct { // 0xc
     /* 0x8 */ SFXGrainPtr FirstGrain;
 } SFX;
 
-typedef SFX* SFXPtr;
+typedef SFX *SFXPtr;
 
 typedef struct { // 0xc
     /* 0x0 */ SInt8 Vol;
@@ -258,13 +274,13 @@ typedef struct { // 0xc
     /* 0x8 */ SFXGrain2Ptr FirstGrain;
 } SFX2;
 
-typedef SFX2* SFX2Ptr;
+typedef SFX2 *SFX2Ptr;
 
 struct SFXUserData { // 0x10
     /* 0x0 */ UInt32 data[4];
 };
 
-typedef SFXUserData* SFXUserDatPtr;
+typedef struct SFXUserData *SFXUserDatPtr;
 
 struct SFXName { // 0x14
     /* 0x00 */ UInt32 Name[4];
@@ -272,7 +288,7 @@ struct SFXName { // 0x14
     /* 0x12 */ SInt16 reserved;
 };
 
-typedef SFXName* SFXNamePtr;
+typedef struct SFXName *SFXNamePtr;
 
 struct VAGName { // 0x1c
     /* 0x00 */ UInt32 Name[4];
@@ -281,7 +297,7 @@ struct VAGName { // 0x1c
     /* 0x18 */ UInt32 res2;
 };
 
-typedef VAGName* VAGNamePtr;
+typedef struct VAGName *VAGNamePtr;
 
 struct VAGImport { // 0x20
     /* 0x00 */ UInt32 BlockName[2];
@@ -290,7 +306,7 @@ struct VAGImport { // 0x20
     /* 0x1c */ UInt32 VAGSR;
 };
 
-typedef VAGImport* VAGImportPtr;
+typedef struct VAGImport *VAGImportPtr;
 
 struct VAGExport { // 0x18
     /* 0x00 */ UInt32 VAGName[4];
@@ -298,7 +314,7 @@ struct VAGExport { // 0x18
     /* 0x14 */ UInt32 VAGSR;
 };
 
-typedef VAGExport* VAGExportPtr;
+typedef struct VAGExport *VAGExportPtr;
 
 struct SFXBlockNames { // 0x98
     /* 0x00 */ UInt32 BlockName[2];
@@ -310,7 +326,7 @@ struct SFXBlockNames { // 0x98
     /* 0x58 */ SInt16 VAGHashOffsets[32];
 };
 
-typedef SFXBlockNames* SFXBlockNamesPtr;
+typedef struct SFXBlockNames *SFXBlockNamesPtr;
 
 struct SNDModelNodeHeader_t { // 0x14
     /* 0x00 */ UInt8 Type;
@@ -319,10 +335,10 @@ struct SNDModelNodeHeader_t { // 0x14
     /* 0x04 */ UInt32 OutputRef;
     /* 0x08 */ UInt32 InputRef;
     /* 0x0c */ SInt32 WorkVal;
-    /* 0x10 */ SNDModelNodeHeader_t* Next;
+    /* 0x10 */ struct SNDModelNodeHeader_t *Next;
 };
 
-typedef SNDModelNodeHeader_t SNDModelNodeHeader;
+typedef struct SNDModelNodeHeader_t SNDModelNodeHeader;
 
 typedef struct { // 0x24
     /* 0x00 */ SNDModelNodeHeader Header;
@@ -342,7 +358,7 @@ typedef struct { // 0x20
 typedef struct { // 0x1c
     /* 0x00 */ SNDModelNodeHeader Header;
     /* 0x14 */ UInt8 MixType;
-    /* 0x18 */ SNDModelNodeHeader** Inputs;
+    /* 0x18 */ SNDModelNodeHeader **Inputs;
 } SNDModelMixer;
 
 typedef struct { // 0x8
@@ -353,7 +369,7 @@ typedef struct { // 0x8
 typedef struct { // 0x1c
     /* 0x00 */ SNDModelNodeHeader Header;
     /* 0x14 */ UInt32 Flags;
-    /* 0x18 */ SNDModelCurvePoint* Point;
+    /* 0x18 */ SNDModelCurvePoint *Point;
 } SNDModelCurve;
 
 typedef struct { // 0x18
@@ -364,20 +380,20 @@ typedef struct { // 0x18
 
 typedef struct { // 0x30
     /* 0x00 */ SNDModelNodeHeader Header;
-    /* 0x14 */ SFXName SoundID;
+    /* 0x14 */ struct SFXName SoundID;
     /* 0x28 */ UInt32 Flags;
-    /* 0x2c */ SNDModelParamOut* Params;
+    /* 0x2c */ SNDModelParamOut *Params;
 } SNDModelSoundElement;
 
 typedef struct { // 0x20
     /* 0x00 */ UInt32 Flags;
-    /* 0x04 */ SNDModelController* Controller;
-    /* 0x08 */ SNDModelEvent* Event;
-    /* 0x0c */ SNDModelNodeHeader* SNDModelTickNodes;
-    /* 0x10 */ SNDModelNodeHeader* MiddleNodes;
-    /* 0x14 */ SNDModelSoundElement* Element;
+    /* 0x04 */ SNDModelController *Controller;
+    /* 0x08 */ SNDModelEvent *Event;
+    /* 0x0c */ SNDModelNodeHeader *SNDModelTickNodes;
+    /* 0x10 */ SNDModelNodeHeader *MiddleNodes;
+    /* 0x14 */ SNDModelSoundElement *Element;
     /* 0x18 */ SInt32 InstanceRecordSize;
-    /* 0x1c */ SInt32* InstanceTableHead;
+    /* 0x1c */ SInt32 *InstanceTableHead;
 } SNDModel;
 
 struct SFXBlock { // 0x3c
@@ -394,15 +410,15 @@ struct SFXBlock { // 0x3c
     /* 0x1a */ SInt16 NumVAGs;
     /* 0x1c */ SFXPtr FirstSound;
     /* 0x20 */ SFXGrainPtr FirstGrain;
-    /* 0x24 */ void* VagsInSR;
+    /* 0x24 */ void *VagsInSR;
     /* 0x28 */ UInt32 VagDataSize;
     /* 0x2c */ UInt32 SRAMAllocSize;
-    /* 0x30 */ SFXBlock* NextBlock;
-    /* 0x34 */ SFXBlockNames* BlockNames;
-    /* 0x38 */ SFXUserData* SFXUD;
+    /* 0x30 */ struct SFXBlock *NextBlock;
+    /* 0x34 */ struct SFXBlockNames *BlockNames;
+    /* 0x38 */ struct SFXUserData *SFXUD;
 };
 
-typedef SFXBlock* SFXBlockPtr;
+typedef struct SFXBlock *SFXBlockPtr;
 
 struct SFXBlock2 { // 0x40
     /* 0x00 */ UInt32 DataID;
@@ -418,16 +434,16 @@ struct SFXBlock2 { // 0x40
     /* 0x1a */ SInt16 NumVAGs;
     /* 0x1c */ SFX2Ptr FirstSound;
     /* 0x20 */ SFXGrain2Ptr FirstGrain;
-    /* 0x24 */ void* VagsInSR;
+    /* 0x24 */ void *VagsInSR;
     /* 0x28 */ UInt32 VagDataSize;
     /* 0x2c */ UInt32 SRAMAllocSize;
-    /* 0x30 */ SFXBlock2* NextBlock;
-    /* 0x34 */ void* GrainData;
-    /* 0x38 */ SFXBlockNames* BlockNames;
-    /* 0x3c */ SFXUserData* SFXUD;
+    /* 0x30 */ struct SFXBlock2 *NextBlock;
+    /* 0x34 */ void *GrainData;
+    /* 0x38 */ struct SFXBlockNames *BlockNames;
+    /* 0x3c */ struct SFXUserData *SFXUD;
 };
 
-typedef SFXBlock2* SFXBlock2Ptr;
+typedef struct SFXBlock2 *SFXBlock2Ptr;
 
 typedef struct { // 0x28
     /* 0x00 */ UInt32 DataID;
@@ -435,16 +451,16 @@ typedef struct { // 0x28
     /* 0x06 */ SInt8 Flags;
     /* 0x07 */ SInt8 pad1;
     /* 0x08 */ UInt32 ID;
-    /* 0x0c */ void* NextMIDIBlock;
+    /* 0x0c */ void *NextMIDIBlock;
     /* 0x10 */ UInt32 BankID;
     /* 0x14 */ SoundBankPtr BankPtr;
-    /* 0x18 */ SInt8* DataStart;
-    /* 0x1c */ SInt8* MultiMIDIParent;
+    /* 0x18 */ SInt8 *DataStart;
+    /* 0x1c */ SInt8 *MultiMIDIParent;
     /* 0x20 */ UInt32 Tempo;
     /* 0x24 */ SInt32 PPQ;
 } MIDIBlockHeader;
 
-typedef MIDIBlockHeader* MIDIBlockHeaderPtr;
+typedef MIDIBlockHeader *MIDIBlockHeaderPtr;
 
 typedef struct { // 0x14
     /* 0x00 */ UInt32 DataID;
@@ -452,11 +468,11 @@ typedef struct { // 0x14
     /* 0x06 */ SInt8 Flags;
     /* 0x07 */ SInt8 NumMIDIBlocks;
     /* 0x08 */ UInt32 ID;
-    /* 0x0c */ void* NextMIDIBlock;
-    /* 0x10 */ SInt8* BlockPtr[1];
+    /* 0x0c */ void *NextMIDIBlock;
+    /* 0x10 */ SInt8 *BlockPtr[1];
 } MultiMIDIBlockHeader;
 
-typedef MultiMIDIBlockHeader* MultiMIDIBlockHeaderPtr;
+typedef MultiMIDIBlockHeader *MultiMIDIBlockHeaderPtr;
 
 struct VAGStreamQueEntry { // 0x14
     /* 0x00 */ UInt32 flags;
@@ -465,7 +481,7 @@ struct VAGStreamQueEntry { // 0x14
     /* 0x0c */ SInt8 vol;
     /* 0x0d */ SInt8 sub_group;
     /* 0x0e */ SInt16 pan;
-    /* 0x10 */ VAGStreamQueEntry* next;
+    /* 0x10 */ struct VAGStreamQueEntry *next;
 };
 
 struct VPKFileVolPanPair { // 0x4
@@ -481,26 +497,26 @@ struct VPKFileHead { // 0x1c
     /* 0x0c */ UInt32 buff_size;
     /* 0x10 */ UInt32 sample_rate;
     /* 0x14 */ UInt32 num_channels;
-    /* 0x18 */ VPKFileVolPanPair vol_pan[1];
+    /* 0x18 */ struct VPKFileVolPanPair vol_pan[1];
 };
 
-typedef VPKFileHead* VPKFileHeadPtr;
+typedef struct VPKFileHead *VPKFileHeadPtr;
 
 struct VAGBuffer { // 0x2c
     /* 0x00 */ UInt32 flags;
-    /* 0x04 */ SInt8* IOPbuff;
-    /* 0x08 */ SInt8* SPUbuff;
-    /* 0x0c */ struct VAGBuffer* list;
-    /* 0x10 */ struct VAGStreamHeader* owner;
+    /* 0x04 */ SInt8 *IOPbuff;
+    /* 0x08 */ SInt8 *SPUbuff;
+    /* 0x0c */ struct VAGBuffer *list;
+    /* 0x10 */ struct VAGStreamHeader *owner;
     /* 0x14 */ SInt32 is_end;
     /* 0x18 */ UInt32 bytes;
-    /* 0x1c */ char* shift_from;
-    /* 0x20 */ char* shift_to;
+    /* 0x1c */ char *shift_from;
+    /* 0x20 */ char *shift_to;
     /* 0x24 */ UInt32 shift_amount;
-    /* 0x28 */ SInt8* OrigIOPbuff;
+    /* 0x28 */ SInt8 *OrigIOPbuff;
 };
 
-typedef VAGBuffer* VAGBufferPtr;
+typedef struct VAGBuffer *VAGBufferPtr;
 
 struct VAGStreamHeader { // 0xd4
     /* 0x00 */ UInt32 flags;
@@ -509,7 +525,7 @@ struct VAGStreamHeader { // 0xd4
     /* 0x06 */ SInt16 orig_pan;
     /* 0x08 */ UInt32 pitch;
     /* 0x0c */ UInt32 buff_size;
-    /* 0x10 */ VAGBuffer buff[2];
+    /* 0x10 */ struct VAGBuffer buff[2];
     /* 0x68 */ SInt32 PlayingBuffer;
     /* 0x6c */ UInt32 LastPosition;
     /* 0x70 */ SInt32 LastBufferChangeTick;
@@ -523,8 +539,8 @@ struct VAGStreamHeader { // 0xd4
     /* 0x90 */ UInt32 stdio_file_offset;
     /* 0x94 */ UInt32 ee_streammon_loc;
     /* 0x98 */ UInt32 ee_BufferSize;
-    /* 0x9c */ char* ee_EEStartAddress;
-    /* 0xa0 */ char* ee_NextIOPReadAddress;
+    /* 0x9c */ char *ee_EEStartAddress;
+    /* 0xa0 */ char *ee_NextIOPReadAddress;
     /* 0xa4 */ UInt32 ee_TotalBytesConsumed;
     /* 0xa8 */ UInt32 bytes_total;
     /* 0xac */ UInt32 bytes_remaining;
@@ -536,26 +552,26 @@ struct VAGStreamHeader { // 0xd4
     /* 0xc4 */ SInt8 master_volume;
     /* 0xc5 */ SInt8 sub_group;
     /* 0xc6 */ SInt16 master_pan;
-    /* 0xc8 */ struct VAGStreamHeader* sync_list;
-    /* 0xcc */ struct VAGStreamHeader* next;
-    /* 0xd0 */ struct VAGStreamHandler* handler;
+    /* 0xc8 */ struct VAGStreamHeader *sync_list;
+    /* 0xcc */ struct VAGStreamHeader *next;
+    /* 0xd0 */ struct VAGStreamHandler *handler;
 };
 
-typedef VAGStreamHeader* VAGStreamHeaderPtr;
+typedef struct VAGStreamHeader *VAGStreamHeaderPtr;
 typedef SInt32 (*EffectProcPtr)(/* parameters unknown */);
 
 struct EffectChain { // 0x10
     /* 0x0 */ UInt32 Flags;
     /* 0x4 */ SInt16 delta_counter;
     /* 0x6 */ SInt16 delta_type;
-    /* 0x8 */ EffectChain* next;
+    /* 0x8 */ struct EffectChain *next;
     /* 0xc */ EffectProcPtr proc;
 };
 
-typedef EffectChain* EffectChainPtr;
+typedef struct EffectChain *EffectChainPtr;
 
 struct BasicEffect { // 0x1c
-    /* 0x00 */ EffectChain ec;
+    /* 0x00 */ struct EffectChain ec;
     /* 0x10 */ SInt32 value;
     /* 0x14 */ SInt16 delta_value;
     /* 0x16 */ SInt16 delta_time;
@@ -563,10 +579,10 @@ struct BasicEffect { // 0x1c
     /* 0x1a */ SInt16 pad;
 };
 
-typedef BasicEffect* BasicEffectPtr;
+typedef struct BasicEffect *BasicEffectPtr;
 
 struct ModEffectmaster { // 0x20
-    /* 0x00 */ EffectChain ec;
+    /* 0x00 */ struct EffectChain ec;
     /* 0x10 */ SInt32 num_effects;
     /* 0x14 */ EffectChainPtr first;
     /* 0x18 */ SInt32 num_params;
@@ -574,7 +590,7 @@ struct ModEffectmaster { // 0x20
 };
 
 struct VolumeModEffect { // 0x2c
-    /* 0x00 */ EffectChain ec;
+    /* 0x00 */ struct EffectChain ec;
     /* 0x10 */ SInt32 type;
     /* 0x14 */ SInt32 rate;
     /* 0x18 */ SInt32 depth;
@@ -597,16 +613,16 @@ struct GenericSoundHandler { // 0x34
     /* 0x14 */ SInt16 Current_PM;
     /* 0x16 */ UInt8 flags;
     /* 0x17 */ SInt8 VolGroup;
-    /* 0x18 */ VoiceFlags Voices;
-    /* 0x20 */ GenericSoundHandler* prev;
-    /* 0x24 */ GenericSoundHandler* next;
-    /* 0x28 */ GenericSoundHandler* parent;
-    /* 0x2c */ GenericSoundHandler* first_child;
-    /* 0x30 */ GenericSoundHandler* siblings;
+    /* 0x18 */ struct VoiceFlags Voices;
+    /* 0x20 */ struct GenericSoundHandler *prev;
+    /* 0x24 */ struct GenericSoundHandler *next;
+    /* 0x28 */ struct GenericSoundHandler *parent;
+    /* 0x2c */ struct GenericSoundHandler *first_child;
+    /* 0x30 */ struct GenericSoundHandler *siblings;
 };
 
-typedef GenericSoundHandler GSoundHandler;
-typedef GenericSoundHandler* GSoundHandlerPtr;
+typedef struct GenericSoundHandler GSoundHandler;
+typedef struct GenericSoundHandler *GSoundHandlerPtr;
 
 struct BlockSoundHandler { // 0x124
     /* 0x000 */ GSoundHandler SH;
@@ -630,24 +646,24 @@ struct BlockSoundHandler { // 0x124
     /* 0x054 */ SInt16 sk_grains_to_skip;
     /* 0x056 */ UInt16 pad2;
     /* 0x058 */ SFXBlock2Ptr block;
-    /* 0x05c */ LFOTracker lfo[4];
+    /* 0x05c */ struct LFOTracker lfo[4];
     /* 0x11c */ UInt32 start_tick;
-    /* 0x120 */ SFX2* orig_sound;
+    /* 0x120 */ SFX2 *orig_sound;
 };
 
-typedef BlockSoundHandler* BlockSoundHandlerPtr;
+typedef struct BlockSoundHandler *BlockSoundHandlerPtr;
 
 struct VAGStreamHandler { // 0x58
     /* 0x00 */ GSoundHandler SH;
     /* 0x34 */ SInt32 num_streams;
     /* 0x38 */ SInt32 doubling_voice;
     /* 0x3c */ SInt8 group_vols[16];
-    /* 0x4c */ VAGStreamHeader* qued_stream;
-    /* 0x50 */ VAGStreamQueEntry* que_list;
-    /* 0x54 */ BOOL pre_buffer_queue;
+    /* 0x4c */ struct VAGStreamHeader *qued_stream;
+    /* 0x50 */ struct VAGStreamQueEntry *que_list;
+    /* 0x54 */ bool pre_buffer_queue;
 };
 
-typedef VAGStreamHandler* VAGStreamHandlerPtr;
+typedef struct VAGStreamHandler *VAGStreamHandlerPtr;
 
 struct SoundHandler { // 0x40
     /* 0x00 */ GSoundHandler SH;
@@ -658,14 +674,14 @@ struct SoundHandler { // 0x40
     /* 0x3c */ UInt32 Duration;
 };
 
-typedef SoundHandler VAGSoundHandler;
-typedef SoundHandler* VAGSoundHandlerPtr;
+typedef struct SoundHandler VAGSoundHandler;
+typedef struct SoundHandler *VAGSoundHandlerPtr;
 
 struct MIDIHandler { // 0xc0
     /* 0x00 */ GSoundHandler SH;
     /* 0x34 */ SoundBankPtr BankPtr;
-    /* 0x38 */ SInt8* DataStart;
-    /* 0x3c */ SInt8* PlayPos;
+    /* 0x38 */ SInt8 *DataStart;
+    /* 0x3c */ SInt8 *PlayPos;
     /* 0x40 */ UInt32 TickCountdown;
     /* 0x44 */ SInt32 TickDelta;
     /* 0x48 */ UInt32 Tempo;
@@ -685,7 +701,7 @@ struct MIDIHandler { // 0xc0
     /* 0xbe */ SInt16 pad2;
 };
 
-typedef MIDIHandler* MIDIHandlerPtr;
+typedef struct MIDIHandler *MIDIHandlerPtr;
 
 typedef struct { // 0x34
     /* 0x00 */ SInt8 num_channels;
@@ -700,17 +716,17 @@ struct AMEHandler { // 0x3c4
     /* 0x000 */ GSoundHandler SH;
     /* 0x034 */ GroupDescription group[16];
     /* 0x374 */ SInt8 MIDIRegister[16];
-    /* 0x384 */ UInt8* MIDIMacro[16];
+    /* 0x384 */ UInt8 *MIDIMacro[16];
 };
 
-typedef AMEHandler* AMEHandlerPtr;
+typedef struct AMEHandler *AMEHandlerPtr;
 
 struct AMEStreamHeader { // 0xe8
     /* 0x00 */ MIDIBlockHeader MB;
-    /* 0x28 */ MIDIHandler MH;
+    /* 0x28 */ struct MIDIHandler MH;
 };
 
-typedef AMEStreamHeader* AMEStreamHeaderPtr;
+typedef struct AMEStreamHeader *AMEStreamHeaderPtr;
 
 struct basic_data { // 0x4
     /* 0x0 */ UInt32 pad1;
@@ -731,13 +747,13 @@ struct block_data { // 0x4
 };
 
 union ownerdata_tag { // 0xc
-    /* 0x0 */ basic_data BasicData;
-    /* 0x0 */ midi_data MIDIData;
-    /* 0x0 */ block_data BlockData;
+    /* 0x0 */ struct basic_data BasicData;
+    /* 0x0 */ struct midi_data MIDIData;
+    /* 0x0 */ struct block_data BlockData;
 };
 
 struct VoiceAttributes { // 0x38
-    /* 0x00 */ VoiceAttributes* playlist;
+    /* 0x00 */ struct VoiceAttributes *playlist;
     /* 0x04 */ SInt32 voice;
     /* 0x08 */ UInt32 Status;
     /* 0x0c */ GSoundHandlerPtr Owner;
@@ -752,10 +768,10 @@ struct VoiceAttributes { // 0x38
     /* 0x24 */ SInt16 Current_PB;
     /* 0x26 */ SInt16 Current_PM;
     /* 0x28 */ UInt32 Flags;
-    /* 0x2c */ ownerdata_tag OwnerData;
+    /* 0x2c */ union ownerdata_tag OwnerData;
 };
 
-typedef VoiceAttributes* VoiceAttributesPtr;
+typedef struct VoiceAttributes *VoiceAttributesPtr;
 
 struct LocAndSize { // 0x8
     /* 0x0 */ UInt32 offset;
@@ -765,10 +781,10 @@ struct LocAndSize { // 0x8
 struct FileAttributes { // 0x10
     /* 0x0 */ UInt32 type;
     /* 0x4 */ UInt32 num_chunks;
-    /* 0x8 */ LocAndSize where[1];
+    /* 0x8 */ struct LocAndSize where[1];
 };
 
-typedef FileAttributes* FileAttributesPtr;
+typedef struct FileAttributes *FileAttributesPtr;
 
 struct DuckerDef { // 0x18
     /* 0x00 */ SInt32 source_group;
@@ -779,7 +795,7 @@ struct DuckerDef { // 0x18
     /* 0x14 */ SInt32 current_duck_mult;
 };
 
-typedef DuckerDef* DuckerDefPtr;
+typedef struct DuckerDef *DuckerDefPtr;
 
 union bank_tag { // 0x8
     /* 0x0 */ char name[8];
@@ -792,10 +808,10 @@ union snd_tag { // 0x10
 };
 
 struct SndPlayParams { // 0x30
-    /* 0x00 */ bank_tag bank_spec;
+    /* 0x00 */ union bank_tag bank_spec;
     /* 0x08 */ SInt32 vol;
     /* 0x0c */ SInt32 pan;
-    /* 0x10 */ snd_tag snd_spec;
+    /* 0x10 */ union snd_tag snd_spec;
     /* 0x20 */ SInt16 pitch_mod;
     /* 0x22 */ SInt16 pitch_bend;
     /* 0x24 */ SInt8 reg[4];
@@ -803,20 +819,20 @@ struct SndPlayParams { // 0x30
     /* 0x2c */ UInt32 reserved;
 };
 
-typedef SndPlayParams* SndPlayParamsPtr;
+typedef struct SndPlayParams *SndPlayParamsPtr;
 
 struct EEVagStreamMonitor { // 0x40
     /* 0x00 */ UInt32 BufferSize;
-    /* 0x04 */ char* EEStartAddress;
-    /* 0x08 */ char* NextIOPReadAddress;
+    /* 0x04 */ char *EEStartAddress;
+    /* 0x08 */ char *NextIOPReadAddress;
     /* 0x0c */ UInt32 TotalBytesConsumed;
     /* 0x10 */ char pad[48];
 };
 
 struct IOPVagStreamMonitor { // 0x40
     /* 0x00 */ unsigned int BufferSize;
-    /* 0x04 */ char* IOPStartAddress;
-    /* 0x08 */ char* NextIOPReadAddress;
+    /* 0x04 */ char *IOPStartAddress;
+    /* 0x08 */ char *NextIOPReadAddress;
     /* 0x0c */ int TotalBytesConsumed;
     /* 0x10 */ char pad[48];
 };
@@ -831,14 +847,14 @@ struct Extern989Handler { // 0x14
     /* 0x10 */ Extern989Proc procs[1];
 };
 
-typedef Extern989Handler* Extern989HandlerPtr;
+typedef struct Extern989Handler *Extern989HandlerPtr;
 
 typedef struct { // 0x4
     /* 0x0 */ SInt16 left;
     /* 0x2 */ SInt16 right;
 } VolPair;
 
-typedef void* (*ExternSndIOPAlloc)(int size, int use, int *act_size);
+typedef void *(*ExternSndIOPAlloc)(int size, int use, int *act_size);
 typedef void (*ExternSndIOPFree)(void *mem);
 
 struct GetSoundUserDataCommandStruct { // 0x24
@@ -846,7 +862,7 @@ struct GetSoundUserDataCommandStruct { // 0x24
     /* 0x04 */ int snd_index;
     /* 0x08 */ u_int bank_name[2];
     /* 0x10 */ u_int snd_name[4];
-    /* 0x20 */ int* destination;
+    /* 0x20 */ int *destination;
 };
 
 typedef void (*ExternBankMonitor)(/* parameters unknown */);
@@ -870,7 +886,7 @@ struct PVSBN_struct { // 0xa0
     /* 0x9c */ UInt32 flags;
 };
 
-typedef PVSBN_struct* PVSBN_structPtr;
+typedef struct PVSBN_struct *PVSBN_structPtr;
 typedef void (*SndErrorDisplayFunc)(/* parameters unknown */);
 typedef int (*sceSdTransIntrHandler)(/* parameters unknown */);
 typedef int (*sceSdSpu2IntrHandler)(/* parameters unknown */);
@@ -895,21 +911,21 @@ struct SndMessageData { // 0x20
     /* 0x1c */ int command;
 };
 
-typedef SndMessageData* SndMessageDataPtr;
+typedef struct SndMessageData *SndMessageDataPtr;
 
 struct SndCommandEntry { // 0x4
     /* 0x0 */ short int command;
     /* 0x2 */ short int size;
 };
 
-typedef SndCommandEntry* SndCommandEntryPtr;
+typedef struct SndCommandEntry *SndCommandEntryPtr;
 
 struct SndCommandBuffer { // 0x1000
     /* 0x000 */ int num_commands;
     /* 0x004 */ char buffer[4092];
 };
 
-typedef SndCommandBuffer* SndCommandBufferPtr;
+typedef struct SndCommandBuffer *SndCommandBufferPtr;
 typedef void (*SndCompleteProc)(/* parameters unknown */);
 
 struct SndCommandReturnDef { // 0x8
@@ -917,7 +933,7 @@ struct SndCommandReturnDef { // 0x8
     /* 0x4 */ u_long u_data;
 };
 
-typedef SndCommandReturnDef* SndCommandReturnDefPtr;
+typedef struct SndCommandReturnDef *SndCommandReturnDefPtr;
 
 struct VAGStreamCommand { // 0x110
     /* 0x000 */ char name[256];
@@ -1049,12 +1065,12 @@ enum SL {
 };
 
 typedef void (*SpuTransferCallbackProc)(/* parameters unknown */);
-typedef void (*CommandHandler)(SInt8* msg_data);
+typedef void (*CommandHandler)(SInt8 *msg_data);
 typedef SInt32 (*LFOFunction)(struct LFOTracker *tracker, int step);
-typedef SInt32 (*GrainHandler)(BlockSoundHandlerPtr handler, SFX2Ptr sfx,SFXGrain2Ptr grain);
+typedef SInt32 (*GrainHandler)(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 
 struct timercommon { // 0x8
-    /* 0x0 */ int* thid;
+    /* 0x0 */ int *thid;
     /* 0x4 */ int compare;
 };
 
@@ -1062,13 +1078,13 @@ struct sSRAMNode_tag { // 0x18
     /* 0x00 */ UInt32 loc;
     /* 0x04 */ UInt32 size;
     /* 0x08 */ UInt32 in_use;
-    /* 0x0c */ sSRAMNode_tag* root;
-    /* 0x10 */ sSRAMNode_tag* smaller;
-    /* 0x14 */ sSRAMNode_tag* bigger;
+    /* 0x0c */ struct sSRAMNode_tag *root;
+    /* 0x10 */ struct sSRAMNode_tag *smaller;
+    /* 0x14 */ struct sSRAMNode_tag *bigger;
 };
 
-typedef sSRAMNode_tag sSRAMNode;
-typedef sSRAMNode_tag* sSRAMNodePtr;
+typedef struct sSRAMNode_tag sSRAMNode;
+typedef struct sSRAMNode_tag *sSRAMNodePtr;
 
 typedef struct { // 0x4
     /* 0x0 */ SInt16 min;
