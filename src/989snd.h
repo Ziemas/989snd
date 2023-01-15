@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+
+extern SInt32 gThreadPriority_TICK;
+
 void snd_CMD_SL_CLOSE(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANK(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANKBYLOC(SInt8 *msg_data);
