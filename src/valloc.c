@@ -1,5 +1,9 @@
 #include "valloc.h"
+#include "989snd.h"
+#include "reverb.h"
+#include "stick.h"
 #include "types.h"
+
 /* data 1dfc */ SInt32 gLockBlockerSema = -1;
 /* data 1e00 */ SInt32 gTickAttentionNeeded = 0;
 /* data 1e04 */ SInt32 gVoiceAllocationBlocked = 0;
@@ -22,21 +26,115 @@
 /* 00033514 00033708 */ void snd_InitVoiceAllocator() {
     /* -0x20(sp) */ SInt32 count;
     /* -0x1c(sp) */ SemaParam sema;
+
+    gVoiceAllocationBlocked = 0;
+    gTickAttentionNeeded = 0;
+    for (int i = 0; i < 48; i++) {
+        snd_MarkVoiceFree(i);
+        gChannelStatus[i].voice = i;
+        gAutoFreeState[i] = 0;
+    }
+    gAwaitingKeyOn[0] = 0;
+    gAwaitingKeyOn[1] = 0;
+    gAwaitingKeyOff[0] = 0;
+    gAwaitingKeyOff[1] = 0;
+    gKeyedOnVoices[0] = 0;
+    gKeyedOnVoices[1] = 0;
+    gKeyedOffVoices[0] = 0;
+    gKeyedOffVoices[1] = 0;
+    gReverbVoices[0] = 0;
+    gReverbVoices[1] = 0;
+    gExternVoices[0] = 0;
+    gExternVoices[1] = 0;
+    gChannelMode = 0;
+    gReverbMode = 0;
+    gPlayingListHead = NULL;
+    for (int i = 0; i < 16; i++) {
+        gVoiceRanges[i].min = 0;
+        gVoiceRanges[i].max = 47;
+    }
+
+    sema.attr = SA_THPRI;
+    sema.initial = 0;
+    sema.max = 1;
+    gLockBlockerSema = CreateSema(&sema);
+    SignalSema(gLockBlockerSema);
 }
 
-/* 00033708 0003374c */ void snd_CleanupVoiceAllocator() {}
+/* 00033708 0003374c */ void snd_CleanupVoiceAllocator() {
+    DeleteSema(gLockBlockerSema);
+    gLockBlockerSema = -1;
+}
+
 /* 0003374c 000338c0 */ void snd_SetMixerMode(/* 0x0(sp) */ SInt32 channel_mode, /* 0x4(sp) */ SInt32 reverb_mode) {
     /* -0x10(sp) */ SInt32 count;
+    snd_SetReverbMode(reverb_mode);
+    gChannelMode = channel_mode;
+
+    if (channel_mode == 1) {
+        for (int i = 0; i < 16; i++) {
+            gVoiceRanges[i].min = 24;
+            gVoiceRanges[i].max = 47;
+        }
+        gVoiceRanges[1].min = 0;
+        gVoiceRanges[1].max = 23;
+    } else {
+        for (int i = 0; i < 16; i++) {
+            gVoiceRanges[i].min = 0;
+            gVoiceRanges[i].max = 47;
+        }
+    }
 }
 
-/* 000338c0 0003396c */ void snd_SetGroupVoiceRange(/* 0x0(sp) */ SInt32 group, /* 0x4(sp) */ SInt32 min, /* 0x8(sp) */ SInt32 max) {}
+/* 000338c0 0003396c */ void snd_SetGroupVoiceRange(/* 0x0(sp) */ SInt32 group, /* 0x4(sp) */ SInt32 min, /* 0x8(sp) */ SInt32 max) {
+    if (min < 0) {
+        min = 0;
+    }
+    if (max >= 48) {
+        max = 47;
+    }
+    gVoiceRanges[group].min = min;
+    gVoiceRanges[group].max = max;
+}
+
 /* 0003396c 00033a50 */ SInt32 snd_LockVoiceAllocatorEx(/* 0x0(sp) */ bool block, /* 0x4(sp) */ UInt32 ownerID) {
     /* -0x10(sp) */ SInt32 ws_ret;
+    if (block) {
+        ws_ret = WaitSema(gLockBlockerSema);
+        if (ws_ret) {
+            snd_ShowError(80, ws_ret, 0, 0, 0);
+            return 0;
+        }
+    } else {
+        if (PollSema(gLockBlockerSema) == -419) {
+            return 0;
+        }
+    }
+
+    gVAllocOwnerID = ownerID;
+    gVoiceAllocatorInUse = 1;
+
+    return 1;
 }
 
-/* 00033a50 00033a88 */ SInt32 snd_IsVoiceAllocatorLocked() {}
-/* 00033a88 00033aec */ SInt32 snd_CheckAllocatorCueTick() {}
-/* 00033aec 00033b34 */ void snd_UnlockVoiceAllocator() {}
+/* 00033a50 00033a88 */ SInt32 snd_IsVoiceAllocatorLocked() {
+    return gVoiceAllocatorInUse;
+}
+
+/* 00033a88 00033aec */ SInt32 snd_CheckAllocatorCueTick() {
+    if (!gVoiceAllocatorInUse) {
+        return 0;
+    }
+    gTickAttentionNeeded++;
+    return 1;
+}
+
+/* 00033aec 00033b34 */ void snd_UnlockVoiceAllocator() {
+    gVoiceAllocatorInUse = 0;
+    gVAllocOwnerID = 0;
+    SignalSema(gLockBlockerSema);
+}
+
 /* 00033b34 00033c9c */ SInt32 snd_ExternVoiceAlloc(/* 0x0(sp) */ SInt32 vol_group, /* 0x4(sp) */ SInt32 priority) {
     /* -0x18(sp) */ SInt32 voice;
     /* -0x14(sp) */ UInt32 core;

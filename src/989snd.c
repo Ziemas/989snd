@@ -603,7 +603,7 @@
 
     gWriteBackdataOffset = snd_MESSAGE_RETURN_BUFFER + 4;
 
-    sema.attr = 0;
+    sema.attr = SA_THFIFO;
     sema.initial = 0;
     sema.max = 1;
 

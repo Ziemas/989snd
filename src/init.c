@@ -98,7 +98,7 @@
     /* -0x2c(sp) */ ThreadParam param;
     /* -0x18(sp) */ SemaParam sema;
 
-    sema.attr = 1;
+    sema.attr = SA_THPRI;
     sema.initial = 0;
     sema.max = 1;
     gSTickSema = CreateSema(&sema);

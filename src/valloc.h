@@ -10,6 +10,7 @@ extern UInt32 gAwaitingKeyOff[2];
 void snd_InitVoiceAllocator();
 void snd_CleanupVoiceAllocator();
 
+void snd_MarkVoiceFree(SInt32 voice);
 void snd_StopPendingVoices();
 
 #endif // VALLOC_H_
