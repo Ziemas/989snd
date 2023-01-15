@@ -1,4 +1,5 @@
 #include "types.h"
+
 /* data 12e0 */ SInt32 gSTickSema = -1;
 /* data 12e4 */ SInt32 gTimerThreadID = 0;
 /* data 12e8 */ SInt32 gTimerID = 0;
@@ -11,7 +12,10 @@
 /* data 1304 */ bool gPrefs_Silent = false;
 /* bss 0 */ struct timercommon gTimerInfo;
 
-/* 0000f7c8 0000f808 */ SInt32 snd_SystemRunning() {}
+/* 0000f7c8 0000f808 */ SInt32 snd_SystemRunning() {
+    return gTickMode != -1;
+}
+
 /* 0000f808 0000fb64 */ SInt32 snd_StartSoundSystemEx(/* 0x0(sp) */ UInt32 flags) {
     /* -0x18(sp) */ SInt32 ret;
     /* -0x14(sp) */ SInt32 i;

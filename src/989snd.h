@@ -112,5 +112,6 @@ void snd_ParseCommandLineArg(char *arg);
 void snd_DumpVersionAndInfo();
 
 void snd_ShowError(SInt32 num, UInt32 a1, UInt32 a2, UInt32 a3, UInt32 a4);
+SInt32 snd_GetVal(char *st);
 
 #endif // 989SND_H_

@@ -887,7 +887,7 @@ struct PVSBN_struct { // 0xa0
 };
 
 typedef struct PVSBN_struct *PVSBN_structPtr;
-typedef void (*SndErrorDisplayFunc)(/* parameters unknown */);
+typedef void (*SndErrorDisplayFunc)(SInt32 num, UInt32 a1, UInt32 a2, UInt32 a3, UInt32 a4);
 typedef int (*sceSdTransIntrHandler)(/* parameters unknown */);
 typedef int (*sceSdSpu2IntrHandler)(/* parameters unknown */);
 

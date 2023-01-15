@@ -1,11 +1,16 @@
 #include "989snd.h"
 #include "extern.h"
+#include "init.h"
+#include "loader.h"
+#include "playsnd.h"
 #include "stick.h"
 #include "types.h"
 #include "valloc.h"
+#include "vol.h"
 
 #include <intrman.h>
 #include <stdio.h>
+#include <sysclib.h>
 #include <sysmem.h>
 
 /* data 0 */ UInt16 g989Version = 0x301;
@@ -206,7 +211,8 @@
 }
 
 /* 00000c54 00000d0c */ void snd_CMD_SL_PLAYSOUND(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
+    *(SInt32 *)gWriteBackdataOffset = snd_PlaySoundVolPanPMPB(data[0], data[1], data[2], data[3], *(SInt16 *)&data[4], *((SInt16 *)(&data[4]) + 2));
 }
 
 /* 00000d0c 00000db4 */ void snd_CMD_SL_PLAYSOUND_A(/* 0x0(sp) */ SInt8 *msg_data) {
@@ -444,32 +450,108 @@
 }
 
 /* 00002ecc 00002f48 */ void snd_CMD_SL_SETMASTERVOLUMEDUCKER(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data;
-    /* -0xc(sp) */ DuckerDefPtr state;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
+    /* -0xc(sp) */ DuckerDefPtr state = &data[1];
+
+    if (data[1] == -1) {
+        state = NULL;
+    }
+
+    snd_SetMasterVolumeDucker(*data, state);
 }
 
-/* 00002f48 00002f8c */ void snd_CMD_SL_CDSTATUS(/* 0x0(sp) */ SInt8 *msg_data) {}
+/* 00002f48 00002f8c */ void snd_CMD_SL_CDSTATUS(/* 0x0(sp) */ SInt8 *msg_data) {
+    *(SInt32 *)gWriteBackdataOffset = sceCdStatus();
+}
+
 /* 00002f8c 00003120 */ void snd_CMD_SL_COMMAND_BATCH(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x18(sp) */ SndCommandBufferPtr batch;
+    /* -0x18(sp) */ SndCommandBufferPtr batch = (SndCommandBufferPtr)msg_data;
     /* -0x14(sp) */ char *command_buffer_walk;
     /* -0x10(sp) */ SInt32 x;
     /* -0xc(sp) */ SInt16 command;
     /* -0xa(sp) */ SInt16 size;
+
+    command_buffer_walk = batch->buffer;
+    for (x = 0; x < batch->num_commands; x++) {
+        SndCommandEntryPtr entry = command_buffer_walk;
+        command = entry->command;
+        size = entry->size;
+        command_buffer_walk += sizeof(struct SndCommandEntry);
+
+        if ((size & 3) != 0) {
+            size = 4 - -4 * (size / 4);
+        }
+
+        gCommandFunc[command](command_buffer_walk);
+        command_buffer_walk += size;
+        gWriteBackdataOffset += 4;
+    }
+
+    gWriteBackdataOffset -= 4;
 }
 
-/* 00003120 000031c8 */ static void *snd_EEMessageParser(/* 0x0(sp) */ UInt32 command, /* 0x4(sp) */ void *data, /* 0x8(sp) */ SInt32 size) {}
+/* 00003120 000031c8 */ static void *snd_EEMessageParser(/* 0x0(sp) */ UInt32 command, /* 0x4(sp) */ void *data, /* 0x8(sp) */ SInt32 size) {
+    gWriteBackdataOffset = snd_MESSAGE_RETURN_BUFFER + 4;
+    gCommandFunc[command](data);
+    *(SInt32 *)(gWriteBackdataOffset + 4) = -1;
+
+    return snd_MESSAGE_RETURN_BUFFER;
+}
+
 /* 000031c8 00003274 */ SInt32 snd_StartEEMessaging() {
     /* -0x68(sp) */ sceSifQueueData qd;
     /* -0x50(sp) */ sceSifServeData sd;
+
+    *(SInt32 *)snd_MESSAGE_RECIEVE_BUFFER = -1;
+    sceSifInitRpc(0);
+    sceSifSetRpcQueue(&qd, GetThreadId());
+    sceSifRegisterRpc(&sd, 0x123456, snd_EEMessageParser, &snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRpcLoop(&qd);
+
+    return 0;
 }
 
 /* 00003274 00003454 */ static void *snd_EELoaderMessageParser(/* 0x0(sp) */ UInt32 command, /* 0x4(sp) */ void *data, /* 0x8(sp) */ SInt32 size) {
-    /* -0x10(sp) */ SInt32 ret_val;
+    /* -0x10(sp) */ SInt32 ret_val = 0;
+
+    // added
+    SndMessageDataPtr msg = data;
+
+    switch (command) {
+    case SL_LOADBANK:
+        ret_val = (SInt32)snd_BankLoadEx((char *)&msg->data[1], msg->data[0], 0, 0);
+        break;
+    case SL_LOADBANKBYLOC:
+        ret_val = (SInt32)snd_BankLoadByLocEx(msg->data[0], msg->data[1], 0, 0);
+        break;
+    case SL_LOADMMD:
+        ret_val = (SInt32)snd_MMDLoad((SInt8 *)&msg->data[1], msg->data[0]);
+        break;
+    case SL_LOADMMDBYLOC:
+        ret_val = (SInt32)snd_MMDLoadByLoc(msg->data[0], msg->data[1]);
+        break;
+    case SL_BANKLOADFROMEE:
+        ret_val = (SInt32)snd_BankLoadFromEEEx(msg->data[0], 0, 0);
+        break;
+    case SL_BANKLOADFROMIOP:
+        ret_val = (SInt32)snd_BankLoadFromIOPEx((void *)&msg->data[0], 0, 0);
+        break;
+    }
+
+    snd_LOADER_MESSAGE_RETURN_BUFFER[0] = (UInt32)ret_val;
+    return snd_LOADER_MESSAGE_RETURN_BUFFER;
 }
 
 /* 00003454 000034f0 */ SInt32 snd_StartEELoaderMessaging() {
     /* -0x68(sp) */ sceSifQueueData qd;
     /* -0x50(sp) */ sceSifServeData sd;
+
+    sceSifInitRpc(0);
+    sceSifSetRpcQueue(&qd, GetThreadId());
+    sceSifRegisterRpc(&sd, 0x123457, snd_EELoaderMessageParser, &snd_LOADER_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRpcLoop(&qd);
+
+    return 0;
 }
 
 /* 000034f0 0000386c */ SInt32 _start(/* 0x0(sp) */ SInt32 argc, /* 0x4(sp) */ SInt8 **argv) {
@@ -558,8 +640,34 @@
     return 0;
 }
 
-/* 0000386c 00003a10 */ void snd_ParseCommandLineArg(/* 0x0(sp) */ char *arg) {}
-/* 00003a10 00003b1c */ SInt32 snd_GetVal(/* 0x0(sp) */ char *st) {}
+/* 0000386c 00003a10 */ void snd_ParseCommandLineArg(/* 0x0(sp) */ char *arg) {
+    if (!strncmp(arg, "tick_priority", 13)) {
+        gThreadPriority_TICK = snd_GetVal(arg + 13);
+    } else if (!strncmp(arg, "rpc_priority", 12)) {
+        gThreadPriority_RPC = snd_GetVal(arg + 12);
+    } else if (!strncmp(arg, "stream_priority", 15)) {
+        gThreadPriority_STREAM = snd_GetVal(arg + 15);
+    } else if (!strncmp(arg, "do_rpc", 6)) {
+        gDoRPC = snd_GetVal(arg + 6) == 1;
+    } else if (!strncmp(arg, "limit_2meg", 10)) {
+        gLimit2Meg = true;
+    } else {
+        snd_ShowError(7, (int)arg, 0, 0, 0);
+    }
+}
+
+/* 00003a10 00003b1c */ SInt32 snd_GetVal(/* 0x0(sp) */ char *st) {
+    while (*st != 45 && (*st < 48 || *st >= 58) && *st) {
+        st++;
+    }
+
+    if (*st) {
+        return strtol(st, NULL, 10);
+    }
+
+    return 0;
+}
+
 /* 00003b1c 00003cf4 */ void snd_DumpVersionAndInfo() {
     printf("\n");
     printf("==========================================================\n");
@@ -585,7 +693,22 @@
     printf("\n");
 }
 
-/* 00003cf4 00003d24 */ void snd_RegisterErrorDisplayFunc(/* 0x0(sp) */ SndErrorDisplayFunc func) {}
-/* 00003d24 00003dec */ void snd_ShowError(/* 0x0(sp) */ SInt32 num, /* 0x4(sp) */ UInt32 a1, /* 0x8(sp) */ UInt32 a2, /* 0xc(sp) */ UInt32 a3, /* 0x10(sp) */ UInt32 a4) {}
-/* 00003dec 00003e2c */ void snd_EEDMADone(/* 0x0(sp) */ SInt32 *sema_id_ptr) {}
-/* 00003e2c 00003e5c */ void snd_Install989Monitor(/* 0x0(sp) */ struct Extern989MonitorInfo *mon) {}
+/* 00003cf4 00003d24 */ void snd_RegisterErrorDisplayFunc(/* 0x0(sp) */ SndErrorDisplayFunc func) {
+    gErrorDisplayFunc = func;
+}
+
+/* 00003d24 00003dec */ void snd_ShowError(/* 0x0(sp) */ SInt32 num, /* 0x4(sp) */ UInt32 a1, /* 0x8(sp) */ UInt32 a2, /* 0xc(sp) */ UInt32 a3, /* 0x10(sp) */ UInt32 a4) {
+    if (gErrorDisplayFunc) {
+        gErrorDisplayFunc(num, a1, a2, a3, a4);
+    } else if (!gPrefs_Silent) {
+        printf("989snd Error: cause %d -> %u, %u, %u, %u\n", num, a1, a2, a3, a4);
+    }
+}
+
+/* 00003dec 00003e2c */ void snd_EEDMADone(/* 0x0(sp) */ SInt32 *sema_id_ptr) {
+    iSignalSema(*sema_id_ptr);
+}
+
+/* 00003e2c 00003e5c */ void snd_Install989Monitor(/* 0x0(sp) */ struct Extern989MonitorInfo *mon) {
+    g989Monitor = mon;
+}
