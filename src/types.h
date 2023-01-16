@@ -55,6 +55,11 @@ typedef struct { // 0x30
     /* 0x20 */ char Name[16];
 } SCEIVAGHeader;
 
+enum ToneFlags {
+    TONE_REVERB = 1 << 1,
+    TONE_REVERB_ONLY = 1 << 4,
+};
+
 typedef struct { // 0x18
     /* 0x00 */ SInt8 Priority;
     /* 0x01 */ SInt8 Vol;
@@ -888,23 +893,23 @@ struct PVSBN_struct { // 0xa0
 
 typedef struct PVSBN_struct *PVSBN_structPtr;
 typedef void (*SndErrorDisplayFunc)(SInt32 num, UInt32 a1, UInt32 a2, UInt32 a3, UInt32 a4);
-//typedef int (*sceSdTransIntrHandler)(/* parameters unknown */);
-//typedef int (*sceSdSpu2IntrHandler)(/* parameters unknown */);
+// typedef int (*sceSdTransIntrHandler)(/* parameters unknown */);
+// typedef int (*sceSdSpu2IntrHandler)(/* parameters unknown */);
 
-//typedef struct { // 0x8
-//    /* 0x0 */ short unsigned int func;
-//    /* 0x2 */ short unsigned int entry;
-//    /* 0x4 */ unsigned int value;
-//} sceSdBatch;
+// typedef struct { // 0x8
+//     /* 0x0 */ short unsigned int func;
+//     /* 0x2 */ short unsigned int entry;
+//     /* 0x4 */ unsigned int value;
+// } sceSdBatch;
 //
-//typedef struct { // 0x14
-//    /* 0x00 */ int core;
-//    /* 0x04 */ int mode;
-//    /* 0x08 */ short int depth_L;
-//    /* 0x0a */ short int depth_R;
-//    /* 0x0c */ int delay;
-//    /* 0x10 */ int feedback;
-//} sceSdEffectAttr;
+// typedef struct { // 0x14
+//     /* 0x00 */ int core;
+//     /* 0x04 */ int mode;
+//     /* 0x08 */ short int depth_L;
+//     /* 0x0a */ short int depth_R;
+//     /* 0x0c */ int delay;
+//     /* 0x10 */ int feedback;
+// } sceSdEffectAttr;
 
 struct SndMessageData { // 0x20
     /* 0x00 */ int data[7];

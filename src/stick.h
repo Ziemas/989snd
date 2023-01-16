@@ -9,4 +9,6 @@ extern SInt8 gAutoFreeState[48];
 
 SInt32 snd_SoundTickHandler();
 
+UInt32 snd_GetTick();
+
 #endif // STICK_H_
