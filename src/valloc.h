@@ -21,4 +21,6 @@ void snd_MarkVoicePlaying(SInt32 voice);
 void snd_MarkVoiceFree(SInt32 voice);
 void snd_StopPendingVoices();
 
+void snd_KeyOffVoiceRaw(int core, int voice);
+
 #endif // VALLOC_H_

@@ -490,6 +490,31 @@
     /* -0x18(sp) */ SInt32 c_v;
     /* -0x14(sp) */ SInt32 intr_state;
     /* -0x10(sp) */ SInt32 dis;
+
+    for (int i = 0; i < 48; i++) {
+        core = i / 24;
+        c_v = i % 24;
+
+        if ((voices->core[core] & (1 << c_v)) != 0) {
+            if (do_owner_proc && gChannelStatus[i].OwnerProc) {
+                gChannelStatus[i].OwnerProc(i, gChannelStatus[i].Owner, 3);
+            }
+        }
+
+        gChannelStatus[i].OwnerProc = NULL;
+        if (gChannelStatus[i].Priority != VOICE_PRIORITY_PERM) {
+            snd_MarkVoiceFree(i);
+        }
+
+        dis = CpuSuspendIntr(&intr_state);
+        sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v), 0);
+        sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v), 0);
+        if (!dis) {
+            CpuResumeIntr(intr_state);
+        }
+
+        snd_KeyOffVoiceRaw(core, c_v);
+    }
 }
 
 /* 000362b0 00036470 */ void snd_PauseVoices(/* 0x0(sp) */ struct VoiceFlags *voices) {
@@ -498,6 +523,21 @@
     /* -0x18(sp) */ SInt32 c_v;
     /* -0x14(sp) */ SInt32 intr_state;
     /* -0x10(sp) */ SInt32 dis;
+
+    for (int i = 0; i < 48; i++) {
+        core = i / 24;
+        c_v = i % 24;
+
+        if ((voices->core[core] & (1 << c_v)) != 0) {
+            dis = CpuSuspendIntr(&intr_state);
+            sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v), 0);
+            sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v), 0);
+            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(core, c_v), 0);
+            if (!dis) {
+                CpuResumeIntr(intr_state);
+            }
+        }
+    }
 }
 
 /* 00036470 00036678 */ void snd_PauseVoicesOwnedWithOwner(/* 0x0(sp) */ GSoundHandlerPtr owner) {
@@ -506,6 +546,23 @@
     /* -0x18(sp) */ SInt32 c_v;
     /* -0x14(sp) */ SInt32 intr_state;
     /* -0x10(sp) */ SInt32 dis;
+
+    snd_LockVoiceAllocatorEx(1, 122);
+    for (int i = 0; i < 48; i++) {
+        core = i / 24;
+        c_v = i % 24;
+
+        if (gChannelStatus[i].Status && gChannelStatus[i].Owner == owner) {
+            dis = CpuSuspendIntr(&intr_state);
+            sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v), 0);
+            sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v), 0);
+            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(core, c_v), 0);
+            if (!dis) {
+                CpuResumeIntr(intr_state);
+            }
+        }
+    }
+    snd_UnlockVoiceAllocator();
 }
 
 /* 00036678 00036a74 */ void snd_UnPauseVoices(/* 0x0(sp) */ struct VoiceFlags *voices) {
@@ -517,6 +574,33 @@
     /* -0x14(sp) */ UInt32 pitch;
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
+
+    for (int i = 0; i < 48; i++) {
+        core = i / 24;
+        c_v = i % 24;
+
+        if ((voices->core[core] & (1 << c_v)) != 0) {
+            dis = CpuSuspendIntr(&intr_state);
+
+            sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v),
+                          snd_AdjustVolToGroup(gChannelStatus[i].Volume.left, gChannelStatus[i].VolGroup) >> 1);
+            sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v),
+                          snd_AdjustVolToGroup(gChannelStatus[i].Volume.right, gChannelStatus[i].VolGroup) >> 1);
+            snd_PitchBendTone(gChannelStatus[i].Tone,
+                              gChannelStatus[i].Current_PB,
+                              gChannelStatus[i].Current_PM,
+                              gChannelStatus[i].StartNote,
+                              gChannelStatus[i].StartFine,
+                              &note,
+                              &fine);
+            pitch = PS1Note2Pitch(gChannelStatus[i].Tone->CenterNote, gChannelStatus[i].Tone->CenterFine, note, fine);
+            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(core, c_v), pitch);
+
+            if (!dis) {
+                CpuResumeIntr(intr_state);
+            }
+        }
+    }
 }
 
 /* 00036a74 00036eb8 */ void snd_UnPauseVoicesOwnedWithOwner(/* 0x0(sp) */ GSoundHandlerPtr owner) {
@@ -528,29 +612,140 @@
     /* -0x14(sp) */ UInt32 pitch;
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
+
+    snd_LockVoiceAllocatorEx(true, 123);
+    for (int i = 0; i < 48; i++) {
+        core = i / 24;
+        c_v = i % 24;
+
+        if (gChannelStatus[i].Status && gChannelStatus[i].Owner == owner) {
+            dis = CpuSuspendIntr(&intr_state);
+
+            sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v),
+                          snd_AdjustVolToGroup(gChannelStatus[i].Volume.left, gChannelStatus[i].VolGroup) >> 1);
+            sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v),
+                          snd_AdjustVolToGroup(gChannelStatus[i].Volume.right, gChannelStatus[i].VolGroup) >> 1);
+            snd_PitchBendTone(gChannelStatus[i].Tone,
+                              gChannelStatus[i].Current_PB,
+                              gChannelStatus[i].Current_PM,
+                              gChannelStatus[i].StartNote,
+                              gChannelStatus[i].StartFine,
+                              &note,
+                              &fine);
+            pitch = PS1Note2Pitch(gChannelStatus[i].Tone->CenterNote, gChannelStatus[i].Tone->CenterFine, note, fine);
+            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(core, c_v), pitch);
+
+            if (!dis) {
+                CpuResumeIntr(intr_state);
+            }
+        }
+    }
+    snd_UnlockVoiceAllocator();
 }
 
-/* 00036eb8 00036f0c */ struct VoiceAttributes *snd_GetVoiceStatusPtr(/* 0x0(sp) */ SInt32 voice) {}
+/* 00036eb8 00036f0c */ struct VoiceAttributes *snd_GetVoiceStatusPtr(/* 0x0(sp) */ SInt32 voice) {
+    return &gChannelStatus[voice];
+}
+
 /* 00036f0c 0003702c */ UInt16 PS1Note2Pitch(/* -0x18(sp) */ SInt8 center_note, /* -0x17(sp) */ SInt8 center_fine, /* -0x16(sp) */ UInt16 note, /* -0x14(sp) */ SInt16 fine) {
     /* -0x10(sp) */ UInt32 pitch;
     /* -0xc(sp) */ bool ps1;
+
+    if (center_note >= 0) {
+        ps1 = true;
+    } else {
+        ps1 = false;
+        center_note = -center_note;
+    }
+    pitch = sceSdNote2Pitch(center_note, center_fine, note, fine);
+    if (ps1) {
+        return 44100 * pitch / 48000;
+    }
+
+    return pitch;
 }
 
 /* 0003702c 000371a0 */ void snd_PitchBendTone(/* 0x0(sp) */ TonePtr tone, /* 0x4(sp) */ SInt32 pb, /* 0x8(sp) */ SInt32 pm, /* 0xc(sp) */ SInt32 note, /* 0x10(sp) */ SInt32 fine, /* 0x14(sp) */ SInt32 *new_note, /* 0x18(sp) */ SInt32 *new_fine) {
     /* -0x10(sp) */ SInt32 pitch;
+
+    pitch = (note << 7) + fine + pm;
+    if (pb >= 0) {
+        *new_note = (tone->PBHigh * (pb << 7) / 0x7FFF + pitch) / 128;
+        *new_fine = (tone->PBHigh * (pb << 7) / 0x7FFF + pitch) % 128;
+    } else {
+        *new_note = (tone->PBLow * (pb << 7) / 0x8000 + pitch) / 128;
+        *new_fine = (tone->PBLow * (pb << 7) / 0x8000 + pitch) % 128;
+    }
 }
 
 /* 000371a0 00037338 */ void snd_MarkVoicePlaying(/* 0x0(sp) */ SInt32 voice) {
     /* -0x10(sp) */ struct VoiceAttributes *va;
     /* -0xc(sp) */ struct VoiceAttributes *walk;
+    va = &gChannelStatus[voice];
+    va->Status = 1;
+    va->playlist = NULL;
+    if (gPlayingListHead != NULL) {
+        // TODO funky decompiler output, take a look
+        walk = gPlayingListHead;
+        if (va == gPlayingListHead) {
+            snd_ShowError(82, 0, 0, 0, 0);
+        }
+
+        while (walk->playlist != NULL && walk->playlist != va) {
+            walk = walk->playlist;
+        }
+
+        if (walk->playlist == va) {
+            snd_ShowError(82, 0, 0, 0, 0);
+        } else {
+            walk->playlist = va;
+        }
+    } else {
+        gPlayingListHead = va;
+    }
 }
 
 /* 00037338 000374fc */ void snd_MarkVoiceFree(/* 0x0(sp) */ SInt32 voice) {
     /* -0x18(sp) */ struct VoiceAttributes *va;
-    /* -0x14(sp) */ UInt32 core;
+    /* -0x14(sp) */ UInt32 core = voice / 24;
     /* -0x10(sp) */ struct VoiceAttributes *walk;
+    va = &gChannelStatus[voice];
+    va->Status = 0;
+    va->Owner = NULL;
+
+    if (va == gPlayingListHead) {
+        gPlayingListHead = va->playlist;
+    } else {
+        walk = gPlayingListHead;
+        while (walk != NULL && walk->playlist != va) {
+            walk = walk->playlist;
+        }
+
+        if (walk) {
+            walk->playlist = va->playlist;
+        }
+    }
+
+    if (gNoiseOwnerVoice[core] == voice) {
+        gNoiseOwnerVoice[core] = -1;
+        gNoiseOwnerPriority[core] = -1;
+    }
 }
 
-/* 000374fc 00037534 */ void snd_HardFreeVoice(/* 0x0(sp) */ SInt32 voice) {}
-/* 00037534 00037684 */ void snd_KeyOnVoiceRaw(/* 0x0(sp) */ int core, /* 0x4(sp) */ int voice, /* 0x8(sp) */ bool reverb) {}
-/* 00037684 00037760 */ void snd_KeyOffVoiceRaw(/* 0x0(sp) */ int core, /* 0x4(sp) */ int voice) {}
+/* 000374fc 00037534 */ void snd_HardFreeVoice(/* 0x0(sp) */ SInt32 voice) {
+    snd_MarkVoiceFree(voice);
+}
+
+/* 00037534 00037684 */ void snd_KeyOnVoiceRaw(/* 0x0(sp) */ int core, /* 0x4(sp) */ int voice, /* 0x8(sp) */ bool reverb) {
+    gAwaitingKeyOn[core] |= 1 << voice;
+    if (reverb) {
+        gReverbVoices[core] |= 1 << voice;
+    } else {
+        gReverbVoices[core] &= ~(1 << voice);
+    }
+}
+
+/* 00037684 00037760 */ void snd_KeyOffVoiceRaw(/* 0x0(sp) */ int core, /* 0x4(sp) */ int voice) {
+    gAwaitingKeyOn[core] &= ~(1 << voice);
+    gAwaitingKeyOff[core] |= 1 << voice;
+}
