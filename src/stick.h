@@ -9,6 +9,9 @@ extern SInt8 gAutoFreeState[48];
 
 SInt32 snd_SoundTickHandler();
 
+void snd_LockMasterTick(UInt32 ownerID);
+void snd_UnlockMasterTick();
+
 UInt32 snd_GetTick();
 
 #endif // STICK_H_
