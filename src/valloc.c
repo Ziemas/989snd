@@ -689,6 +689,7 @@
         walk = gPlayingListHead;
         if (va == gPlayingListHead) {
             snd_ShowError(82, 0, 0, 0, 0);
+            return;
         }
 
         while (walk->playlist != NULL && walk->playlist != va) {
@@ -697,6 +698,7 @@
 
         if (walk->playlist == va) {
             snd_ShowError(82, 0, 0, 0, 0);
+            return;
         } else {
             walk->playlist = va;
         }

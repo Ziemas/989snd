@@ -563,7 +563,10 @@ struct VAGStreamHeader { // 0xd4
 };
 
 typedef struct VAGStreamHeader *VAGStreamHeaderPtr;
-typedef SInt32 (*EffectProcPtr)(/* parameters unknown */);
+
+struct EffectChain;
+struct GenericSoundHandler;
+typedef SInt32 (*EffectProcPtr)(struct EffectChain *effect, struct GenericSoundHandler *owner);
 
 struct EffectChain { // 0x10
     /* 0x0 */ UInt32 Flags;

@@ -1,10 +1,15 @@
 #include "sndhand.h"
 #include "989snd.h"
+#include "ame.h"
+#include "blocksnd.h"
 #include "intrman.h"
+#include "midi.h"
+#include "playsnd.h"
 #include "stdio.h"
 #include "stick.h"
 #include "stream.h"
 #include "types.h"
+#include "valloc.h"
 /* data 1c1c */ GSoundHandlerPtr gActiveSoundListHead = NULL;
 /* data 1c20 */ GSoundHandlerPtr gActiveSoundListTail = NULL;
 /* bss 9d0 */ struct BlockSoundHandler gBlockSoundHandler[64];
@@ -32,7 +37,7 @@
     snd_InitHandlers(&gBlockSoundHandler[0].SH, NUM_BLOCK_HANDLER, SOUND_BLOCK, sizeof(struct BlockSoundHandler));
     snd_InitHandlers(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, SOUND_MIDI, sizeof(struct MIDIHandler));
     snd_InitHandlers(&gAMEHandler[0].SH, NUM_AME_HANDLER, SOUND_AME, sizeof(struct AMEHandler));
-    for (x = 0; x < 64; x++) {
+    for (x = 0; x < NUM_EFFECTS; x++) {
         gBasicEffect[x].ec.Flags = 0;
         gBasicEffect[x].ec.next = NULL;
     }
@@ -195,26 +200,38 @@
         gActiveSoundListTail = snd->prev;
     }
 
-    if (snd->parent == NULL) {
-        snd->Sound = NULL;
-        snd->OwnerID &= ~0x80000000;
+    // TODO decompiler mess
 
-        if (!dis) {
-            CpuResumeIntr(intr_state);
+    if (snd->parent != NULL) {
+        if (snd->parent->first_child == snd) {
+            snd->parent->first_child = snd->siblings;
+        } else {
+            for (walk = snd->parent->first_child; walk->siblings != snd; walk = walk->siblings)
+                ;
+            if (walk == NULL) {
+                if (dis == 0) {
+                    CpuResumeIntr(intr_state);
+                }
+                snd_ShowError(116, 0, 0, 0, 0);
+                return;
+            }
+            walk->siblings = snd->siblings;
         }
-
-        return;
+        for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
+            walk->parent = snd->parent;
+        }
+        if (snd->parent->first_child == NULL) {
+            snd->parent->first_child = snd->first_child;
+        } else {
+            for (walk = snd->parent->first_child; walk->siblings != NULL; walk = walk->siblings)
+                ;
+            walk->siblings = snd->first_child;
+        }
     }
 
-    // TODO
-    // TODO
-    // TODO
-    // FIXME
-    // FIXME
-    // FIXME
-    // FIXME
-
-    if (!dis) {
+    snd->Sound = NULL;
+    snd->OwnerID &= ~0x80000000;
+    if (dis == 0) {
         CpuResumeIntr(intr_state);
     }
 }
@@ -323,78 +340,331 @@
 
 /* 0001eca0 0001ed78 */ void snd_PauseHandlerPtr(/* 0x0(sp) */ GSoundHandlerPtr snd, /* 0x4(sp) */ SInt32 and_child) {
     /* -0x10(sp) */ GSoundHandlerPtr walk;
+    if (and_child && snd->first_child != NULL) {
+        for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
+            snd_PauseHandlerPtr(walk, 1);
+        }
+    }
+    snd->flags |= SND_PAUSED;
+    snd_PauseVoicesOwnedWithOwner(snd);
 }
 
 /* 0001ed78 0001ee50 */ void snd_ContinueHandlerPtr(/* 0x0(sp) */ GSoundHandlerPtr snd, /* 0x4(sp) */ SInt32 and_child) {
     /* -0x10(sp) */ GSoundHandlerPtr walk;
+    if (and_child && snd->first_child != NULL) {
+        for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
+            snd_ContinueHandlerPtr(walk, 1);
+        }
+    }
+    snd_UnPauseVoicesOwnedWithOwner(snd);
+    snd->flags &= ~SND_PAUSED;
 }
 
 /* 0001ee50 0001ef74 */ void snd_PauseAllSoundsInGroup(/* 0x0(sp) */ UInt32 groups) {
-    /* -0x10(sp) */ GSoundHandlerPtr walk;
+    /* -0x10(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
     /* -0xc(sp) */ SInt32 type;
+
+    snd_LockMasterTick(75);
+    for (; walk != NULL; walk = walk->next) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & SND_PAUSED) == 0) {
+            type = SND_GET_TYPE(walk->OwnerID);
+            if (type == SOUND_VAG) {
+                snd_PauseVAGStream(walk->OwnerID);
+            } else {
+                snd_PauseHandlerPtr(walk, 1);
+            }
+        }
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001ef74 0001f050 */ void snd_StopAllSoundsInGroup(/* 0x0(sp) */ UInt32 groups) {
-    /* -0x10(sp) */ GSoundHandlerPtr walk;
+    /* -0x10(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
+    snd_LockMasterTick(76);
+    for (; walk != NULL; walk = walk->next) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && SND_GET_ACTIVE(walk->OwnerID) != 0) {
+            snd_StopSound(walk->OwnerID);
+        }
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001f050 0001f174 */ void snd_ContinueAllSoundsInGroup(/* 0x0(sp) */ UInt32 groups) {
-    /* -0x10(sp) */ GSoundHandlerPtr walk;
+    /* -0x10(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
     /* -0xc(sp) */ SInt32 type;
+    snd_LockMasterTick(77);
+    for (; walk != NULL; walk = walk->next) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & SND_PAUSED) != 0) {
+            type = SND_GET_TYPE(walk->OwnerID);
+            if (type == SOUND_VAG) {
+                snd_ContinueVAGStream(walk->OwnerID);
+            } else {
+                snd_ContinueHandlerPtr(walk, 1);
+            }
+        }
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001f174 0001f2d8 */ void snd_StopAllSounds() {
-    /* -0x18(sp) */ GSoundHandlerPtr walk;
+    /* -0x18(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
     /* -0x14(sp) */ struct VoiceFlags voices;
+    snd_LockMasterTick(78);
+    for (; walk != NULL; walk = walk->next) {
+        if (SND_GET_ACTIVE(walk->OwnerID) == 0) {
+            printf("testing deactivated handler on the active list!\n");
+        }
+
+        if (walk->parent == NULL && (walk->flags & SND_UNK4) == 0) {
+            snd_StopHandlerPtr(walk, 1, 1, 0);
+        }
+    }
+    voices.core[0] = -1;
+    voices.core[1] = -1;
+    snd_SilenceVoicesEx(&voices, 1);
+    snd_UnlockMasterTick();
+    if (gActiveSoundListHead != NULL) {
+        while (gActiveSoundListHead != NULL) {
+            DelayThread(33000);
+        }
+    }
 }
 
 /* 0001f2d8 0001f608 */ void snd_StopHandlerPtr(/* 0x0(sp) */ GSoundHandlerPtr snd, /* 0x4(sp) */ SInt32 and_child, /* 0x8(sp) */ SInt32 silence, /* 0xc(sp) */ bool vlimit_stop) {
-    /* -0x18(sp) */ SInt32 do_voice_and_deactivate;
-    /* -0x14(sp) */ bool kill_block_sound;
+    /* -0x18(sp) */ SInt32 do_voice_and_deactivate = 1;
+    /* -0x14(sp) */ bool kill_block_sound = false;
     /* -0x10(sp) */ GSoundHandlerPtr walk;
     /* -0xc(sp) */ MultiMIDIBlockHeaderPtr ame_master;
+
+    snd_LockMasterTick(79);
+    if (SND_GET_ACTIVE(snd->OwnerID)) {
+        if ((snd->flags & SND_UNK4) != 0) {
+            kill_block_sound = true;
+            and_child = 1;
+        }
+        snd->flags |= SND_UNK4;
+
+        if (and_child && snd->first_child != NULL) {
+            for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
+                snd_StopHandlerPtr(walk, and_child, silence, vlimit_stop);
+            }
+        }
+
+        switch (SND_GET_TYPE(snd->OwnerID)) {
+        case SOUND_MIDI:
+            break;
+        case SOUND_AME:
+            ame_master = ((MIDISoundPtr)(snd->Sound))->MIDIBlock;
+            ame_master->Flags &= ~MMIDI_FLAG_UNK2;
+            break;
+        case SOUND_VAG:
+            snd_StopVAGStream(snd->OwnerID);
+            do_voice_and_deactivate = 0;
+            break;
+        case SOUND_BLOCK:
+            if (kill_block_sound) {
+                snd_DoBlockSoundStop((BlockSoundHandlerPtr)snd, 1, vlimit_stop);
+            } else if (snd_DoBlockSoundStop((BlockSoundHandlerPtr)snd, silence, vlimit_stop)) {
+                do_voice_and_deactivate = 0;
+            }
+            break;
+        }
+
+        if (do_voice_and_deactivate) {
+            snd_LockVoiceAllocatorEx(1, 74);
+            if (silence || (snd->flags & SND_PAUSED) != 0) {
+                snd_SilenceVoicesEx(&snd->Voices, 1);
+            } else {
+                snd_KeyOffVoicesEx(&snd->Voices, 1);
+            }
+
+            snd_UnlockVoiceAllocator();
+
+            if (SND_GET_ACTIVE(snd->OwnerID) != 0) {
+                snd_DeactivateHandler(snd, 0);
+            }
+        }
+    }
+
+    snd_UnlockMasterTick();
 }
 
 /* 0001f608 0001f6bc */ void snd_StopAllHandlersForSound(/* 0x0(sp) */ SoundPtr snd, /* 0x4(sp) */ SInt32 silence, /* 0x8(sp) */ bool vlimit_stop) {
     /* -0x10(sp) */ GSoundHandlerPtr walk;
+    for (walk = gActiveSoundListHead; walk != NULL; walk = walk->next) {
+        if (walk->Sound == snd) {
+            snd_StopHandlerPtr(walk, 1, silence, vlimit_stop);
+        }
+    }
 }
 
 /* 0001f6bc 0001f7a4 */ bool snd_KillChildrenWithSound(/* 0x0(sp) */ GSoundHandlerPtr handler, /* 0x4(sp) */ void *sfx) {
     /* -0x10(sp) */ GSoundHandlerPtr walk;
+    if (handler->first_child == NULL) {
+        return 0;
+    }
+    for (walk = handler->first_child; walk != NULL; walk = walk->siblings) {
+        if (walk->Sound == sfx) {
+            snd_StopHandlerPtr(walk, 1, 0, 0);
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 /* 0001f7a4 0001f8c8 */ SInt32 snd_GetNextHandlerVoice(/* 0x0(sp) */ GSoundHandlerPtr snd, /* 0x4(sp) */ SInt32 start_v) {
     /* -0x18(sp) */ SInt32 x;
     /* -0x14(sp) */ SInt32 core;
     /* -0x10(sp) */ SInt32 c_v;
+    for (x = start_v; x < 48; x++) {
+        core = x / 24;
+        c_v = x % 24;
+        if ((snd->Voices.core[core] & (1 << c_v)) != 0) {
+            return x;
+        }
+    }
+
+    return -1;
 }
 
 /* 0001f8c8 0001fae0 */ void snd_UpdateHandlers() {
-    /* -0x18(sp) */ GSoundHandlerPtr walk;
+    /* -0x18(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
     /* -0x14(sp) */ SInt32 type;
-    /* -0x10(sp) */ SInt32 stop_current_handler;
+    /* -0x10(sp) */ SInt32 stop_current_handler = 0;
+
+    for (; walk != NULL; walk = walk->next) {
+        type = SND_GET_TYPE(walk->OwnerID);
+
+        switch (type) {
+        case SOUND_MIDI:
+        case SOUND_AME_MIDI:
+            if ((walk->flags & SND_PAUSED) == 0) {
+                stop_current_handler = snd_ProcessMIDITick((MIDIHandlerPtr)walk);
+            }
+            break;
+        case SOUND_AME:
+            if (walk->first_child == NULL) {
+                stop_current_handler = 1;
+            }
+            break;
+        case SOUND_VAG:
+            snd_ProcessVAGStreamTick((VAGStreamHandlerPtr)walk);
+            break;
+        case SOUND_BLOCK:
+            if ((walk->flags & SND_PAUSED) == 0) {
+                stop_current_handler = snd_ProcessBlockSoundTick((BlockSoundHandlerPtr)walk);
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (!stop_current_handler && walk->Effects != NULL && (walk->flags & SND_PAUSED) == 0) {
+            stop_current_handler = snd_UpdateEffect(walk->Effects, walk);
+        }
+
+        if (stop_current_handler) {
+            snd_StopHandlerPtr(walk, 1, 0, 0);
+            stop_current_handler = 0;
+        }
+    }
 }
 
-/* 0001fae0 0001fc08 */ SInt32 snd_UpdateEffect(/* 0x0(sp) */ EffectChainPtr effect, /* 0x4(sp) */ GSoundHandlerPtr owner) {}
-/* 0001fc08 0001fc6c */ void snd_FreeEffectChain(/* 0x0(sp) */ EffectChainPtr effect) {}
+/* 0001fae0 0001fc08 */ SInt32 snd_UpdateEffect(/* 0x0(sp) */ EffectChainPtr effect, /* 0x4(sp) */ GSoundHandlerPtr owner) {
+    if (effect->next != NULL && snd_UpdateEffect(effect->next, owner) == 1) {
+        return 1;
+    }
+
+    if ((effect->Flags & 0x80000000) != 0) {
+        return 0;
+    }
+
+    if (effect->delta_type == 1) {
+        effect->delta_counter--;
+    }
+
+    if (effect->delta_counter != 0) {
+        return 0;
+    } else {
+        return effect->proc(effect, owner);
+    }
+}
+
+/* 0001fc08 0001fc6c */ void snd_FreeEffectChain(/* 0x0(sp) */ EffectChainPtr effect) {
+    if (effect->next != NULL) {
+        snd_FreeEffectChain(effect->next);
+    }
+
+    effect->Flags = 0;
+}
+
 /* 0001fc6c 0001fcd0 */ void snd_RemoveEffect(/* 0x0(sp) */ GSoundHandlerPtr handler, /* 0x4(sp) */ SInt32 type_flag) {
     /* -0x10(sp) */ EffectChainPtr found;
+    found = snd_FindEffect(handler, type_flag);
+    if (found != NULL) {
+        snd_RemoveEffectFromHandler(handler, found);
+    }
 }
 
 /* 0001fcd0 0001fd7c */ EffectChainPtr snd_FindEffect(/* 0x0(sp) */ GSoundHandlerPtr handler, /* 0x4(sp) */ SInt32 type_flag) {
     /* -0x10(sp) */ EffectChainPtr walk;
+    for (walk = handler->Effects; walk != NULL; walk = walk->next) {
+        if ((walk->Flags & type_flag) == 0) {
+            break;
+        }
+    }
+    return walk;
 }
 
 /* 0001fd7c 0001fea0 */ BasicEffectPtr snd_GetFreeBasicEffect() {
     /* -0x10(sp) */ SInt32 x;
+    for (x = 0; x < NUM_EFFECTS; x++) {
+        if ((gBasicEffect[x].ec.Flags & 1) == 0) {
+            gBasicEffect[x].ec.Flags = 1;
+            gBasicEffect[x].ec.next = NULL;
+            return &gBasicEffect[x];
+        }
+    }
+    return NULL;
 }
 
 /* 0001fea0 0001ff58 */ void snd_AddEffectToHandler(/* 0x0(sp) */ GSoundHandlerPtr handler, /* 0x4(sp) */ EffectChainPtr effect) {
     /* -0x10(sp) */ EffectChainPtr walk;
+    if (handler->Effects != NULL) {
+        walk = handler->Effects;
+        while (walk->next != NULL) {
+            walk = walk->next;
+        }
+        walk->next = effect;
+    } else {
+        handler->Effects = effect;
+    }
 }
 
 /* 0001ff58 000200a8 */ void snd_RemoveEffectFromHandler(/* 0x0(sp) */ GSoundHandlerPtr handler, /* 0x4(sp) */ EffectChainPtr effect) {
     /* -0x18(sp) */ SInt32 intr_state;
     /* -0x14(sp) */ SInt32 res;
     /* -0x10(sp) */ EffectChainPtr walk;
+    if (effect != NULL) {
+        res = CpuSuspendIntr(&intr_state);
+        effect->Flags &= ~1;
+        if (effect == handler->Effects) {
+            handler->Effects = effect->next;
+        } else {
+            walk = handler->Effects;
+            while (walk != NULL) {
+                if (walk->next == effect) {
+                    walk->next = effect->next;
+                    walk = NULL;
+                } else {
+                    walk = walk->next;
+                }
+            }
+        }
+
+        if (!res) {
+            CpuResumeIntr(intr_state);
+        }
+    }
 }

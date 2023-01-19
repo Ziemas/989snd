@@ -3,6 +3,10 @@
 
 #include "types.h"
 
+bool snd_DoBlockSoundStop(BlockSoundHandlerPtr handler, SInt32 silence, bool vlimit_stop);
+
+SInt32 snd_ProcessBlockSoundTick(BlockSoundHandlerPtr handler);
+
 SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_XREF_ID(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);

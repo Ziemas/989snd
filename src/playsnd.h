@@ -5,4 +5,6 @@
 
 UInt32 snd_PlaySoundVolPanPMPB(SoundBankPtr bank, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend);
 
+void snd_StopSound(UInt32 handle);
+
 #endif // PLAYSND_H_
