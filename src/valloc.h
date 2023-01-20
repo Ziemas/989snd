@@ -6,8 +6,15 @@
 extern UInt32 gVAllocOwnerID;
 extern UInt32 gAwaitingKeyOn[2];
 extern UInt32 gAwaitingKeyOff[2];
+extern SInt32 gVoiceAllocatorInUse;
+extern SInt32 gTickAttentionNeeded;
+
+struct VoiceAttributes *gPlayingListHead;
 
 extern struct VoiceAttributes gChannelStatus[48];
+
+extern UInt32 gKeyedOnVoices[2];
+extern UInt32 gKeyedOffVoices[2];
 
 enum {
     NUM_VOICE_PER_CORE = 24,
@@ -30,10 +37,15 @@ UInt16 PS1Note2Pitch(SInt8 center_note, SInt8 center_fine, UInt16 note, SInt16 f
 void snd_PauseVoicesOwnedWithOwner(GSoundHandlerPtr owner);
 void snd_UnPauseVoicesOwnedWithOwner(GSoundHandlerPtr owner);
 
+void snd_VoiceIsDone(SInt32 voice);
+
 void snd_MarkVoicePlaying(SInt32 voice);
 void snd_MarkVoiceFree(SInt32 voice);
+
+void snd_StartPendingVoices();
 void snd_StopPendingVoices();
 
+void snd_KeyOffVoice(SInt32 voice);
 void snd_KeyOffVoicesEx(struct VoiceFlags *voices, bool do_owner_proc);
 void snd_SilenceVoicesEx(struct VoiceFlags *voices, bool do_owner_proc);
 

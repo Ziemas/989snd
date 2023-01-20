@@ -12,6 +12,7 @@ enum {
 };
 
 void snd_InitDuckers();
+void snd_CheckDuckers();
 
 void snd_SetMasterVolume(SInt32 which, SInt32 vol);
 void snd_SetMasterVolumeDucker(SInt32 which, DuckerDefPtr state);
