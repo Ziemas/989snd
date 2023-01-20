@@ -183,31 +183,53 @@
             voll = -voll;
             voll = -volr;
         }
-        if ((spu_vol->left < 0 && spu_vol->right >= 0) || (spu_vol->left >= 0 && spu_vol->right < 0)) {
-            if (spu_vol->left < 0) {
+
+        if (spu_vol->left >= 0 && spu_vol->right < 0) {
+            if (-spu_vol->right >= spu_vol->left) {
+                voll = voll * (spu_vol->right / -spu_vol->right);
+                volr = volr * (spu_vol->right / -spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / spu_vol->left);
+                volr = volr * (spu_vol->left / spu_vol->left);
             }
         }
 
+        if (spu_vol->left < 0 && spu_vol->right >= 0) {
+            if (spu_vol->right >= -spu_vol->left) {
+                voll = voll * (spu_vol->right / spu_vol->right);
+                volr = volr * (spu_vol->right / spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / -spu_vol->left);
+                volr = volr * (spu_vol->left / -spu_vol->left);
+            }
+        }
     } else {
         volr = (gPanTable[snd_pan - 180].left * work_vol) / 0x3fff;
         voll = (gPanTable[snd_pan - 180].right * work_vol) / 0x3fff;
+
         if (gStereoOrMono != 2) {
-            if (spu_vol->left < 0 || spu_vol->right < 0) {
-                if (spu_vol->left >= 0 || spu_vol->right >= 0) {
-                    if (spu_vol->left >= 0) {
-                        volr = -volr;
-                    } else {
-                        voll = -voll;
-                    }
-                } else if (voll >= volr) {
+            if (spu_vol->left < 0 && spu_vol->right < 0) {
+                if (voll >= volr) {
                     voll = -voll;
                 } else {
                     volr = -volr;
                 }
-            } else if (volr >= voll) {
-                voll = -voll;
-            } else {
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right >= 0) {
+                if (volr >= voll) {
+                    voll = -voll;
+                } else {
+                    volr = -volr;
+                }
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right < 0) {
                 volr = -volr;
+            }
+
+            if (spu_vol->left < 0 && spu_vol->right >= 0) {
+                voll = -voll;
             }
         }
     }
