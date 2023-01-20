@@ -7,7 +7,14 @@ extern UInt32 gVAllocOwnerID;
 extern UInt32 gAwaitingKeyOn[2];
 extern UInt32 gAwaitingKeyOff[2];
 
-#define VOICE_PRIORITY_PERM 127
+extern struct VoiceAttributes gChannelStatus[48];
+
+enum {
+    NUM_VOICE_PER_CORE = 24,
+    NUM_VOICES = 48,
+
+    VOICE_PRIORITY_PERM = 127
+};
 
 void snd_InitVoiceAllocator();
 void snd_CleanupVoiceAllocator();

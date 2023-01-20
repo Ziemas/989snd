@@ -874,7 +874,7 @@ struct GetSoundUserDataCommandStruct { // 0x24
 };
 
 typedef void (*ExternBankMonitor)(/* parameters unknown */);
-typedef void (*ExternVolMonitor)(/* parameters unknown */);
+typedef void (*ExternVolMonitor)(SInt32 which, SInt32 vol);
 
 struct Extern989MonitorInfo { // 0x8
     /* 0x0 */ ExternBankMonitor bnk_load;

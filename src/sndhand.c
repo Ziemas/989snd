@@ -517,7 +517,7 @@
     /* -0x18(sp) */ SInt32 x;
     /* -0x14(sp) */ SInt32 core;
     /* -0x10(sp) */ SInt32 c_v;
-    for (x = start_v; x < 48; x++) {
+    for (x = start_v; x < NUM_VOICES; x++) {
         core = x / 24;
         c_v = x % 24;
         if ((snd->Voices.core[core] & (1 << c_v)) != 0) {

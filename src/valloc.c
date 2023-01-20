@@ -33,7 +33,7 @@
 
     gVoiceAllocationBlocked = 0;
     gTickAttentionNeeded = 0;
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         snd_MarkVoiceFree(i);
         gChannelStatus[i].voice = i;
         gAutoFreeState[i] = 0;
@@ -351,7 +351,7 @@
 
 /* 00035254 000353c0 */ void snd_StartVoices(/* 0x0(sp) */ struct VoiceFlags *voices) {
     /* -0x10(sp) */ SInt32 count;
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         if ((i < 24 && ((voices->core[0] & (1 << i)) != 0)) ||
             (i >= 24 && ((voices->core[1] & (1 << (i - 24))) != 0))) {
             snd_MarkVoicePlaying(i);
@@ -467,7 +467,7 @@
     /* -0x14(sp) */ SInt32 core;
     /* -0x10(sp) */ SInt32 c_v;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
         if (gChannelStatus[i].Status == 1 &&
@@ -491,7 +491,7 @@
     /* -0x14(sp) */ SInt32 intr_state;
     /* -0x10(sp) */ SInt32 dis;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
 
@@ -524,7 +524,7 @@
     /* -0x14(sp) */ SInt32 intr_state;
     /* -0x10(sp) */ SInt32 dis;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
 
@@ -548,7 +548,7 @@
     /* -0x10(sp) */ SInt32 dis;
 
     snd_LockVoiceAllocatorEx(1, 122);
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
 
@@ -575,7 +575,7 @@
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
 
@@ -614,7 +614,7 @@
     /* -0xc(sp) */ SInt32 dis;
 
     snd_LockVoiceAllocatorEx(true, 123);
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < NUM_VOICES; i++) {
         core = i / 24;
         c_v = i % 24;
 

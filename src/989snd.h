@@ -6,6 +6,8 @@
 
 extern SInt32 gThreadPriority_TICK;
 
+extern struct Extern989MonitorInfo *g989Monitor;
+
 void snd_CMD_SL_CLOSE(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANK(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANKBYLOC(SInt8 *msg_data);
