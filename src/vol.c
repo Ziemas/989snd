@@ -174,11 +174,10 @@
         snd_pan += 90;
     }
 
-    // TODO/FIXME this is a disaster
-
     if (snd_pan < 180) {
         voll = (gPanTable[snd_pan].left * work_vol) / 0x3fff;
         volr = (gPanTable[snd_pan].right * work_vol) / 0x3fff;
+
         if (spu_vol->left < 0 && spu_vol->right < 0) {
             voll = -voll;
             voll = -volr;
@@ -242,12 +241,194 @@
     /* -0x18(sp) */ SInt32 voll;
     /* -0x14(sp) */ SInt32 volr;
     /* -0x10(sp) */ SInt32 work_vol;
+
+    work_vol = snd_vol * 258;
+    work_vol = (work_vol * prog_vol) / 0x7f;
+    work_vol = (work_vol * tone_vol) / 0x7f;
+    work_vol = (work_vol * bank_vol) / 0x7f;
+
+    if (work_vol == 0) {
+        spu_vol->left = 0;
+        spu_vol->right = 0;
+        return;
+    }
+
+    if (gStereoOrMono == PLAYBACK_MODE_MONO) {
+        spu_vol->left = work_vol;
+        spu_vol->right = work_vol;
+    }
+
+    snd_pan += tone_pan + prog_pan;
+    while (snd_pan >= 360) {
+        snd_pan -= 360;
+    }
+
+    while (snd_pan < 0) {
+        snd_pan += 360;
+    }
+
+    if (snd_pan >= 270) {
+        snd_pan -= 270;
+    } else {
+        snd_pan += 90;
+    }
+
+    if (snd_pan < 180) {
+        voll = (gPanTable[snd_pan].left * work_vol) / 0x3fff;
+        volr = (gPanTable[snd_pan].right * work_vol) / 0x3fff;
+
+        if (spu_vol->left < 0 && spu_vol->right < 0) {
+            voll = -voll;
+            voll = -volr;
+        }
+
+        if (spu_vol->left >= 0 && spu_vol->right < 0) {
+            if (-spu_vol->right >= spu_vol->left) {
+                voll = voll * (spu_vol->right / -spu_vol->right);
+                volr = volr * (spu_vol->right / -spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / spu_vol->left);
+                volr = volr * (spu_vol->left / spu_vol->left);
+            }
+        }
+
+        if (spu_vol->left < 0 && spu_vol->right >= 0) {
+            if (spu_vol->right >= -spu_vol->left) {
+                voll = voll * (spu_vol->right / spu_vol->right);
+                volr = volr * (spu_vol->right / spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / -spu_vol->left);
+                volr = volr * (spu_vol->left / -spu_vol->left);
+            }
+        }
+    } else {
+        volr = (gPanTable[snd_pan - 180].left * work_vol) / 0x3fff;
+        voll = (gPanTable[snd_pan - 180].right * work_vol) / 0x3fff;
+
+        if (gStereoOrMono != 2) {
+            if (spu_vol->left < 0 && spu_vol->right < 0) {
+                if (voll >= volr) {
+                    voll = -voll;
+                } else {
+                    volr = -volr;
+                }
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right >= 0) {
+                if (volr >= voll) {
+                    voll = -voll;
+                } else {
+                    volr = -volr;
+                }
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right < 0) {
+                volr = -volr;
+            }
+
+            if (spu_vol->left < 0 && spu_vol->right >= 0) {
+                voll = -voll;
+            }
+        }
+    }
+
+    spu_vol->left = voll;
+    spu_vol->right = volr;
 }
 
 /* 000389c8 00039044 */ void snd_CalcStereoBalance3d(/* 0x0(sp) */ SInt32 snd_vol, /* 0x4(sp) */ SInt32 snd_pan, /* 0x8(sp) */ SpuVolume *spu_vol) {
     /* -0x18(sp) */ SInt32 voll;
     /* -0x14(sp) */ SInt32 volr;
     /* -0x10(sp) */ SInt32 work_vol;
+
+    work_vol = snd_vol * 258;
+
+    if (work_vol == 0) {
+        spu_vol->left = 0;
+        spu_vol->right = 0;
+        return;
+    }
+
+    if (gStereoOrMono == PLAYBACK_MODE_MONO) {
+        spu_vol->left = work_vol;
+        spu_vol->right = work_vol;
+    }
+
+    while (snd_pan >= 360) {
+        snd_pan -= 360;
+    }
+
+    while (snd_pan < 0) {
+        snd_pan += 360;
+    }
+
+    if (snd_pan >= 270) {
+        snd_pan -= 270;
+    } else {
+        snd_pan += 90;
+    }
+
+    if (snd_pan < 180) {
+        voll = (gPanTable2[snd_pan].left * work_vol) / 0x3fff;
+        volr = (gPanTable2[snd_pan].right * work_vol) / 0x3fff;
+
+        if (spu_vol->left < 0 && spu_vol->right < 0) {
+            voll = -voll;
+            voll = -volr;
+        }
+
+        if (spu_vol->left >= 0 && spu_vol->right < 0) {
+            if (-spu_vol->right >= spu_vol->left) {
+                voll = voll * (spu_vol->right / -spu_vol->right);
+                volr = volr * (spu_vol->right / -spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / spu_vol->left);
+                volr = volr * (spu_vol->left / spu_vol->left);
+            }
+        }
+
+        if (spu_vol->left < 0 && spu_vol->right >= 0) {
+            if (spu_vol->right >= -spu_vol->left) {
+                voll = voll * (spu_vol->right / spu_vol->right);
+                volr = volr * (spu_vol->right / spu_vol->right);
+            } else {
+                voll = voll * (spu_vol->left / -spu_vol->left);
+                volr = volr * (spu_vol->left / -spu_vol->left);
+            }
+        }
+    } else {
+        volr = (gPanTable2[snd_pan - 180].left * work_vol) / 0x3fff;
+        voll = (gPanTable2[snd_pan - 180].right * work_vol) / 0x3fff;
+
+        if (gStereoOrMono != 2) {
+            if (spu_vol->left < 0 && spu_vol->right < 0) {
+                if (voll >= volr) {
+                    voll = -voll;
+                } else {
+                    volr = -volr;
+                }
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right >= 0) {
+                if (volr >= voll) {
+                    voll = -voll;
+                } else {
+                    volr = -volr;
+                }
+            }
+
+            if (spu_vol->left >= 0 && spu_vol->right < 0) {
+                volr = -volr;
+            }
+
+            if (spu_vol->left < 0 && spu_vol->right >= 0) {
+                voll = -voll;
+            }
+        }
+    }
+
+    spu_vol->left = voll;
+    spu_vol->right = volr;
 }
 
 /* 00039044 000391cc */ SInt16 snd_AdjustVolToGroup(/* -0x18(sp) */ SInt16 vol, /* 0x4(sp) */ SInt32 group) {
