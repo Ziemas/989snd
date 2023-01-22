@@ -1,4 +1,6 @@
+#include "libsd.h"
 #include "types.h"
+
 /* data 1bc0 */ SInt32 gReverbType[2] = {-1, -1};
 /* data 1bc8 */ UInt32 gRevRamStart[2] = {0, 0};
 /* data 1bd0 */ SInt32 gRevRamPreAllocType[2] = {-1, -1};

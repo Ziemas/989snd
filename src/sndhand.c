@@ -34,9 +34,9 @@
 
 /* 0001d87c 0001d990 */ void snd_InitSoundHandlers() {
     /* -0x10(sp) */ SInt32 x;
-    snd_InitHandlers(&gBlockSoundHandler[0].SH, NUM_BLOCK_HANDLER, SOUND_BLOCK, sizeof(struct BlockSoundHandler));
-    snd_InitHandlers(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, SOUND_MIDI, sizeof(struct MIDIHandler));
-    snd_InitHandlers(&gAMEHandler[0].SH, NUM_AME_HANDLER, SOUND_AME, sizeof(struct AMEHandler));
+    snd_InitHandlers(&gBlockSoundHandler[0].SH, NUM_BLOCK_HANDLER, HANDLER_BLOCK, sizeof(struct BlockSoundHandler));
+    snd_InitHandlers(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, HANDLER_MIDI, sizeof(struct MIDIHandler));
+    snd_InitHandlers(&gAMEHandler[0].SH, NUM_AME_HANDLER, HANDLER_AME, sizeof(struct AMEHandler));
     for (x = 0; x < NUM_EFFECTS; x++) {
         gBasicEffect[x].ec.Flags = 0;
         gBasicEffect[x].ec.next = NULL;
@@ -91,7 +91,7 @@
     }
 
     while (walk != NULL) {
-        if (SND_GET_TYPE(walk->SH.OwnerID) == SOUND_BLOCK &&
+        if (HND_GET_TYPE(walk->SH.OwnerID) == HANDLER_BLOCK &&
             ((parent && walk->orig_sound == sfx) || (SFX2Ptr)walk->SH.Sound == sfx)) {
             inst++;
             if (weakest == NULL ||
@@ -127,16 +127,16 @@
             snd_StopHandlerPtr(&weakest->SH, 1, 0, 1);
         }
     }
-    return (BlockSoundHandlerPtr)snd_FindFreeHandler(&gBlockSoundHandler[0].SH, NUM_BLOCK_HANDLER, SOUND_BLOCK, sizeof(struct BlockSoundHandler));
+    return (BlockSoundHandlerPtr)snd_FindFreeHandler(&gBlockSoundHandler[0].SH, NUM_BLOCK_HANDLER, HANDLER_BLOCK, sizeof(struct BlockSoundHandler));
 }
 
 /* 0001deec 0001df40 */ MIDIHandlerPtr snd_GetFreeMIDIHandler() {
 
-    return (MIDIHandlerPtr)snd_FindFreeHandler(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, SOUND_MIDI, sizeof(struct MIDIHandler));
+    return (MIDIHandlerPtr)snd_FindFreeHandler(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, HANDLER_MIDI, sizeof(struct MIDIHandler));
 }
 
 /* 0001df40 0001df94 */ AMEHandlerPtr snd_GetFreeAMEHandler() {
-    return (AMEHandlerPtr)snd_FindFreeHandler(&gAMEHandler[0].SH, NUM_AME_HANDLER, SOUND_AME, sizeof(struct AMEHandler));
+    return (AMEHandlerPtr)snd_FindFreeHandler(&gAMEHandler[0].SH, NUM_AME_HANDLER, HANDLER_AME, sizeof(struct AMEHandler));
 }
 
 /* 0001df94 0001e09c */ void snd_ActivateHandler(/* 0x0(sp) */ GSoundHandlerPtr snd) {
@@ -264,8 +264,8 @@
 }
 
 /* 0001e6e8 0001eaec */ GSoundHandlerPtr snd_CheckHandlerStillActive(/* 0x0(sp) */ UInt32 handle) {
-    /* -0x10(sp) */ SInt32 handler_index = SND_GET_INDEX(handle);
-    /* -0xc(sp) */ SInt32 handler_type = SND_GET_TYPE(handle);
+    /* -0x10(sp) */ SInt32 handler_index = HND_GET_INDEX(handle);
+    /* -0xc(sp) */ SInt32 handler_type = HND_GET_TYPE(handle);
 
     if (!handle) {
         return 0;
@@ -277,7 +277,7 @@
     }
 
     switch (handler_type) {
-    case SOUND_MIDI:
+    case HANDLER_MIDI:
         if (handler_index >= NUM_MIDI_HANDLER) {
             snd_ShowError(101, handle, 0, 0, 0);
             return NULL;
@@ -286,7 +286,7 @@
             return (GSoundHandlerPtr)&gMIDIHandler[handler_index];
         }
         break;
-    case SOUND_AME:
+    case HANDLER_AME:
         if (handler_index >= NUM_AME_HANDLER) {
             snd_ShowError(101, handle, 0, 0, 0);
             return NULL;
@@ -295,7 +295,7 @@
             return (GSoundHandlerPtr)&gAMEHandler[handler_index];
         }
         break;
-    case SOUND_VAG:
+    case HANDLER_VAG:
         if (handler_index >= gNumVAGStreams) {
             snd_ShowError(101, handle, 0, 0, 0);
             return NULL;
@@ -304,7 +304,7 @@
             return (GSoundHandlerPtr)&gVAGStreamHandler[handler_index];
         }
         break;
-    case SOUND_BLOCK:
+    case HANDLER_BLOCK:
         if (handler_index >= NUM_BLOCK_HANDLER) {
             snd_ShowError(101, handle, 0, 0, 0);
             return NULL;
@@ -319,20 +319,20 @@
 }
 
 /* 0001eaec 0001eca0 */ void snd_StopHandler(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 and_child, /* 0x8(sp) */ SInt32 silence, /* 0xc(sp) */ bool vlimit_stop) {
-    /* -0x18(sp) */ SInt32 handler_index = SND_GET_INDEX(handle);
-    /* -0x14(sp) */ SInt32 handler_type = SND_GET_TYPE(handle);
+    /* -0x18(sp) */ SInt32 handler_index = HND_GET_INDEX(handle);
+    /* -0x14(sp) */ SInt32 handler_type = HND_GET_TYPE(handle);
     /* -0x10(sp) */ GSoundHandlerPtr snd;
     switch (handler_type) {
-    case SOUND_MIDI:
+    case HANDLER_MIDI:
         snd_StopHandlerPtr(&gMIDIHandler[handler_index].SH, and_child, silence, vlimit_stop);
         break;
-    case SOUND_AME:
+    case HANDLER_AME:
         snd_StopHandlerPtr(&gAMEHandler[handler_index].SH, and_child, silence, vlimit_stop);
         break;
-    case SOUND_VAG:
+    case HANDLER_VAG:
         snd_StopHandlerPtr(&gVAGStreamHandler[handler_index].SH, and_child, silence, vlimit_stop);
         break;
-    case SOUND_BLOCK:
+    case HANDLER_BLOCK:
         snd_StopHandlerPtr(&gBlockSoundHandler[handler_index].SH, and_child, silence, vlimit_stop);
         break;
     }
@@ -345,7 +345,7 @@
             snd_PauseHandlerPtr(walk, 1);
         }
     }
-    snd->flags |= SND_PAUSED;
+    snd->flags |= HND_PAUSED;
     snd_PauseVoicesOwnedWithOwner(snd);
 }
 
@@ -357,7 +357,7 @@
         }
     }
     snd_UnPauseVoicesOwnedWithOwner(snd);
-    snd->flags &= ~SND_PAUSED;
+    snd->flags &= ~HND_PAUSED;
 }
 
 /* 0001ee50 0001ef74 */ void snd_PauseAllSoundsInGroup(/* 0x0(sp) */ UInt32 groups) {
@@ -366,9 +366,9 @@
 
     snd_LockMasterTick(75);
     for (; walk != NULL; walk = walk->next) {
-        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & SND_PAUSED) == 0) {
-            type = SND_GET_TYPE(walk->OwnerID);
-            if (type == SOUND_VAG) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & HND_PAUSED) == 0) {
+            type = HND_GET_TYPE(walk->OwnerID);
+            if (type == HANDLER_VAG) {
                 snd_PauseVAGStream(walk->OwnerID);
             } else {
                 snd_PauseHandlerPtr(walk, 1);
@@ -382,7 +382,7 @@
     /* -0x10(sp) */ GSoundHandlerPtr walk = gActiveSoundListHead;
     snd_LockMasterTick(76);
     for (; walk != NULL; walk = walk->next) {
-        if ((groups & (1 << walk->VolGroup)) != 0 && SND_GET_ACTIVE(walk->OwnerID) != 0) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && HND_GET_ACTIVE(walk->OwnerID) != 0) {
             snd_StopSound(walk->OwnerID);
         }
     }
@@ -394,9 +394,9 @@
     /* -0xc(sp) */ SInt32 type;
     snd_LockMasterTick(77);
     for (; walk != NULL; walk = walk->next) {
-        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & SND_PAUSED) != 0) {
-            type = SND_GET_TYPE(walk->OwnerID);
-            if (type == SOUND_VAG) {
+        if ((groups & (1 << walk->VolGroup)) != 0 && (walk->flags & HND_PAUSED) != 0) {
+            type = HND_GET_TYPE(walk->OwnerID);
+            if (type == HANDLER_VAG) {
                 snd_ContinueVAGStream(walk->OwnerID);
             } else {
                 snd_ContinueHandlerPtr(walk, 1);
@@ -411,11 +411,11 @@
     /* -0x14(sp) */ struct VoiceFlags voices;
     snd_LockMasterTick(78);
     for (; walk != NULL; walk = walk->next) {
-        if (SND_GET_ACTIVE(walk->OwnerID) == 0) {
+        if (HND_GET_ACTIVE(walk->OwnerID) == 0) {
             printf("testing deactivated handler on the active list!\n");
         }
 
-        if (walk->parent == NULL && (walk->flags & SND_UNK4) == 0) {
+        if (walk->parent == NULL && (walk->flags & HND_UNK4) == 0) {
             snd_StopHandlerPtr(walk, 1, 1, 0);
         }
     }
@@ -437,12 +437,12 @@
     /* -0xc(sp) */ MultiMIDIBlockHeaderPtr ame_master;
 
     snd_LockMasterTick(79);
-    if (SND_GET_ACTIVE(snd->OwnerID)) {
-        if ((snd->flags & SND_UNK4) != 0) {
+    if (HND_GET_ACTIVE(snd->OwnerID)) {
+        if ((snd->flags & HND_UNK4) != 0) {
             kill_block_sound = true;
             and_child = 1;
         }
-        snd->flags |= SND_UNK4;
+        snd->flags |= HND_UNK4;
 
         if (and_child && snd->first_child != NULL) {
             for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
@@ -450,18 +450,18 @@
             }
         }
 
-        switch (SND_GET_TYPE(snd->OwnerID)) {
-        case SOUND_MIDI:
+        switch (HND_GET_TYPE(snd->OwnerID)) {
+        case HANDLER_MIDI:
             break;
-        case SOUND_AME:
+        case HANDLER_AME:
             ame_master = ((MIDISoundPtr)(snd->Sound))->MIDIBlock;
             ame_master->Flags &= ~MMIDI_FLAG_UNK2;
             break;
-        case SOUND_VAG:
+        case HANDLER_VAG:
             snd_StopVAGStream(snd->OwnerID);
             do_voice_and_deactivate = 0;
             break;
-        case SOUND_BLOCK:
+        case HANDLER_BLOCK:
             if (kill_block_sound) {
                 snd_DoBlockSoundStop((BlockSoundHandlerPtr)snd, 1, vlimit_stop);
             } else if (snd_DoBlockSoundStop((BlockSoundHandlerPtr)snd, silence, vlimit_stop)) {
@@ -472,7 +472,7 @@
 
         if (do_voice_and_deactivate) {
             snd_LockVoiceAllocatorEx(1, 74);
-            if (silence || (snd->flags & SND_PAUSED) != 0) {
+            if (silence || (snd->flags & HND_PAUSED) != 0) {
                 snd_SilenceVoicesEx(&snd->Voices, 1);
             } else {
                 snd_KeyOffVoicesEx(&snd->Voices, 1);
@@ -480,7 +480,7 @@
 
             snd_UnlockVoiceAllocator();
 
-            if (SND_GET_ACTIVE(snd->OwnerID) != 0) {
+            if (HND_GET_ACTIVE(snd->OwnerID) != 0) {
                 snd_DeactivateHandler(snd, 0);
             }
         }
@@ -534,25 +534,25 @@
     /* -0x10(sp) */ SInt32 stop_current_handler = 0;
 
     for (; walk != NULL; walk = walk->next) {
-        type = SND_GET_TYPE(walk->OwnerID);
+        type = HND_GET_TYPE(walk->OwnerID);
 
         switch (type) {
-        case SOUND_MIDI:
-        case SOUND_AME_MIDI:
-            if ((walk->flags & SND_PAUSED) == 0) {
+        case HANDLER_MIDI:
+        case HANDLER_AME_MIDI:
+            if ((walk->flags & HND_PAUSED) == 0) {
                 stop_current_handler = snd_ProcessMIDITick((MIDIHandlerPtr)walk);
             }
             break;
-        case SOUND_AME:
+        case HANDLER_AME:
             if (walk->first_child == NULL) {
                 stop_current_handler = 1;
             }
             break;
-        case SOUND_VAG:
+        case HANDLER_VAG:
             snd_ProcessVAGStreamTick((VAGStreamHandlerPtr)walk);
             break;
-        case SOUND_BLOCK:
-            if ((walk->flags & SND_PAUSED) == 0) {
+        case HANDLER_BLOCK:
+            if ((walk->flags & HND_PAUSED) == 0) {
                 stop_current_handler = snd_ProcessBlockSoundTick((BlockSoundHandlerPtr)walk);
             }
             break;
@@ -560,7 +560,7 @@
             break;
         }
 
-        if (!stop_current_handler && walk->Effects != NULL && (walk->flags & SND_PAUSED) == 0) {
+        if (!stop_current_handler && walk->Effects != NULL && (walk->flags & HND_PAUSED) == 0) {
             stop_current_handler = snd_UpdateEffect(walk->Effects, walk);
         }
 

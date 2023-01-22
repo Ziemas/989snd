@@ -463,7 +463,7 @@
     snd_LockVoiceAllocatorEx(1, 138);
     dis = CpuSuspendIntr(&intr_state);
     for (int i = 0; i < NUM_VOICES; i++) {
-        if ((gChannelStatus[i].Owner->flags & SND_PAUSED) == 0 &&
+        if ((gChannelStatus[i].Owner->flags & HND_PAUSED) == 0 &&
             (gChannelStatus[i].Status == 1 || gChannelStatus[i].Status == 4) &&
             (flags & (1 << gChannelStatus[i].VolGroup)) != 0) {
             core = i / NUM_VOICE_PER_CORE;
@@ -501,7 +501,7 @@
     for (i = 0; i < NUM_VOICES; i++) {
         if (gChannelStatus[i].Status == 1 || gChannelStatus[i].Status == 4) {
             if (gChannelStatus[i].Owner != NULL) {
-                if ((gChannelStatus[i].Owner->flags & SND_PAUSED) == 0) {
+                if ((gChannelStatus[i].Owner->flags & HND_PAUSED) == 0) {
                     playing_groups |= 1 << gChannelStatus[i].VolGroup;
                 }
             }

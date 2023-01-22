@@ -3,17 +3,17 @@
 
 #include "types.h"
 
-enum SND_TYPE {
-    SOUND_MIDI = 1,
-    SOUND_AME = 2,
-    SOUND_AME_MIDI = 3,
-    SOUND_VAG = 4,
-    SOUND_BLOCK = 5,
+enum HND_TYPE {
+    HANDLER_MIDI = 1,
+    HANDLER_AME = 2,
+    HANDLER_AME_MIDI = 3,
+    HANDLER_VAG = 4,
+    HANDLER_BLOCK = 5,
 };
 
-enum SND_FLAG {
-    SND_PAUSED = 2,
-    SND_UNK4 = 4,
+enum HND_FLAG {
+    HND_PAUSED = 2,
+    HND_UNK4 = 4,
 };
 
 enum SFX_FLAG {
@@ -29,9 +29,9 @@ enum NUM_HANDLERS {
     NUM_AME_HANDLER = 4
 };
 
-#define SND_GET_ACTIVE(a) ((a)&0x80000000)
-#define SND_GET_TYPE(a) (((a) >> 24) & 0x1f)
-#define SND_GET_INDEX(a) (((a) >> 16) & 0xff)
+#define HND_GET_ACTIVE(a) ((a)&0x80000000)
+#define HND_GET_TYPE(a) (((a) >> 24) & 0x1f)
+#define HND_GET_INDEX(a) (((a) >> 16) & 0xff)
 
 void snd_InitSoundHandlers();
 

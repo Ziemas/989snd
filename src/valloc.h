@@ -9,8 +9,7 @@ extern UInt32 gAwaitingKeyOff[2];
 extern SInt32 gVoiceAllocatorInUse;
 extern SInt32 gTickAttentionNeeded;
 
-struct VoiceAttributes *gPlayingListHead;
-
+extern struct VoiceAttributes *gPlayingListHead;
 extern struct VoiceAttributes gChannelStatus[48];
 
 extern UInt32 gKeyedOnVoices[2];

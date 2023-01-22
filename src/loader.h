@@ -3,13 +3,18 @@
 
 #include "types.h"
 
+extern SFXBlock2Ptr gBlockListHead;
 extern bool gLimit2Meg;
+
+enum {
+    SBLK_ID = 0x6B6C4253,
+};
 
 void snd_InitLoader();
 void snd_ShutdownLoader();
 
-/* 00015014 000152f8 */ void *snd_IOPMemAlloc(/* 0x0(sp) */ SInt32 size, /* 0x4(sp) */ SInt32 use, /* 0x8(sp) */ SInt32 *act_size);
-/* 000152f8 00015360 */ void snd_IOPMemFree(/* 0x0(sp) */ void *mem);
+void *snd_IOPMemAlloc(SInt32 size, SInt32 use, SInt32 *act_size);
+void snd_IOPMemFree(void *mem);
 
 SoundBankPtr snd_BankLoadEx(SInt8 *name, SInt32 offset, UInt32 spu_mem_loc, UInt32 spu_mem_size);
 SoundBankPtr snd_BankLoadByLocEx(SInt32 sect_loc, SInt32 file_offset, UInt32 spu_mem_loc, UInt32 spu_mem_size);

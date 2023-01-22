@@ -3,9 +3,15 @@
 
 #include "types.h"
 
+UInt32 snd_PlaySFX(SFXBlock2Ptr block, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend);
+UInt32 snd_PlaySFXWithStruct(SFXBlock2Ptr block, SInt32 sound, SInt16 sfx_vol, SInt16 sfx_pan, SndPlayParamsPtr params);
+
 bool snd_DoBlockSoundStop(BlockSoundHandlerPtr handler, SInt32 silence, bool vlimit_stop);
 
 SInt32 snd_ProcessBlockSoundTick(BlockSoundHandlerPtr handler);
+SInt32 snd_DoesSFXLoop(SFXBlock2Ptr block, SInt32 sound);
+
+void snd_SetSFXVolPan(UInt32 handle, SInt32 vol, SInt32 pan, SInt32 cause);
 
 SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
