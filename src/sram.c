@@ -169,27 +169,54 @@ snd_SRAMInitMalloc() {
     }
 
     for (i = 0; i < NUM_SRAM_NODE; i++, storage++) {
-        // TODO unfinished
+        if (loc < storage->loc || loc >= storage->loc + storage->size) {
+            continue;
+        }
+
+        snd_SRAMRemoveNode(storage);
+        if (loc == storage->loc) {
+            storage->loc = loc + size;
+            storage->size -= size;
+            if (storage->size != 0) {
+                snd_SRAMAddNode(storage);
+            }
+
+            return loc;
+        }
+
+        if (loc + size == storage->loc + storage->size) {
+            storage->size -= size;
+            if (storage->size != 0) {
+                snd_SRAMAddNode(storage);
+            }
+
+            return loc;
+        }
+
+        nn_size = storage->size;
+        storage->size = loc - storage->loc;
+        snd_SRAMAddNode(storage);
+        nn_size = nn_size - storage->size - size;
+        nn_loc = loc + size;
     }
 
-    // TODO seems pretty silly
-    if (nn_size != 0 && free_node < NUM_SRAM_NODE) {
-        if (nn_size >= 0) {
-            gSRAMFreeNodeStorage[free_node].size = nn_size;
-            gSRAMFreeNodeStorage[free_node].loc = nn_loc;
-            gSRAMFreeNodeStorage[free_node].root = NULL;
-            gSRAMFreeNodeStorage[free_node].smaller = NULL;
-            gSRAMFreeNodeStorage[free_node].bigger = NULL;
-            snd_SRAMAddNode(&gSRAMFreeNodeStorage[free_node]);
-        } else {
-            snd_ShowError(34, 0, 0, 0, 0);
-        }
-    } else {
+    if (nn_size == 0 && free_node >= NUM_SRAM_NODE) {
         snd_ShowError(35, 0, 0, 0, 0);
         return 0;
     }
 
-    return nn_loc;
+    if (nn_size < 0) {
+        snd_ShowError(34, 0, 0, 0, 0);
+        return loc;
+    }
+
+    gSRAMFreeNodeStorage[free_node].size = nn_size;
+    gSRAMFreeNodeStorage[free_node].loc = nn_loc;
+    gSRAMFreeNodeStorage[free_node].root = NULL;
+    gSRAMFreeNodeStorage[free_node].smaller = NULL;
+    gSRAMFreeNodeStorage[free_node].bigger = NULL;
+    snd_SRAMAddNode(&gSRAMFreeNodeStorage[free_node]);
+    return loc;
 }
 
 /* 000212b4 00021420 */ void snd_SRAMRemoveNode(/* 0x0(sp) */ sSRAMNodePtr node) {
