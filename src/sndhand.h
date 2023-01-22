@@ -4,6 +4,7 @@
 #include "types.h"
 
 enum HND_TYPE {
+    HANDLER_UNK = 0,
     HANDLER_MIDI = 1,
     HANDLER_AME = 2,
     HANDLER_AME_MIDI = 3,
@@ -47,5 +48,7 @@ void snd_FreeEffectChain(EffectChainPtr effect);
 EffectChainPtr snd_FindEffect(GSoundHandlerPtr handler, SInt32 type_flag);
 
 void snd_RemoveEffectFromHandler(GSoundHandlerPtr handler, EffectChainPtr effect);
+void snd_PauseHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child);
+void snd_ContinueHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child);
 
 #endif // SNDHAND_H_

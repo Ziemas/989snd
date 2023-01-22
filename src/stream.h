@@ -16,4 +16,6 @@ void snd_ProcessVAGStreamTick(VAGStreamHandlerPtr hand);
 
 void snd_SetVAGStreamVolPan(UInt32 handle, SInt32 vol, SInt32 pan);
 
+void snd_SetVagStreamPitchModifier(UInt32 handle, SInt16 mod);
+
 #endif // STREAM_H_

@@ -1,5 +1,6 @@
 #include "playsnd.h"
 #include "ame.h"
+#include "autopan.h"
 #include "blocksnd.h"
 #include "init.h"
 #include "loader.h"
@@ -193,6 +194,10 @@
     }
 
     sound_ptr = &bank->FirstSound[sound];
+    if (sound_ptr->Bank == NULL) {
+        return 0;
+    }
+
     switch (sound_ptr->Type) {
     case SND_TYPE_MIDI:
         ret = snd_PlayMIDISound(sound_ptr, vol, pan, pitch_mod, bend);
@@ -250,6 +255,10 @@
     }
 
     sound_ptr = &bank->FirstSound[sound];
+    if (sound_ptr->Bank == NULL) {
+        return 0;
+    }
+
     switch (sound_ptr->Type) {
     case SND_TYPE_MIDI:
         return ((MIDISoundPtr)(sound_ptr))->Repeats == 0;
@@ -295,65 +304,259 @@
         return 0;
     }
 
+    // TODO make sense out the masks
 
+    if ((mask & 4) != 0 && (mask & 2) != 0) {
+        mask &= ~2u;
+    }
 
+    p = pan;
+
+    if ((mask & 1) == 0) {
+        vol = 0x7FFFFFFF;
+    }
+
+    if ((mask & 2) == 0) {
+        p = -2;
+    }
+
+    if ((mask & 1) != 0 || (mask & 2) != 0) {
+        snd_SetSoundVolPan(handle, vol, p);
+    }
+
+    if ((mask & 4) != 0) {
+        snd_AutoPan(handle, pan, 0, 30, 4);
+    }
+
+    if ((mask & 8) != 0) {
+        snd_SetSoundPitchModifier(handle, pitch_mod);
+    }
+
+    if ((mask & 0x10) != 0) {
+        snd_SetSoundPitchBend(handle, bend);
+    }
+
+    return handle;
 }
 
 /* 0001b138 0001b2d8 */ SInt32 snd_GetSoundOriginalPitch(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 sound) {
     /* -0x10(sp) */ SoundPtr sound_ptr;
+
+    if (bank == NULL) {
+        return 0;
+    }
+    if (bank->DataID == SBLK_ID) {
+        return 0x1E00;
+    }
+    if (sound >= bank->NumSounds || sound < 0) {
+        return 0;
+    }
+    sound_ptr = &bank->FirstSound[sound];
+    if (sound_ptr->Bank == NULL) {
+        return 0;
+    }
+    if (sound_ptr->Type >= 4 || sound_ptr->Type < 1) {
+        return 0;
+    }
+    return (sound_ptr->Note << 7) + sound_ptr->Fine;
 }
 
 /* 0001b2d8 0001b3b4 */ SInt32 snd_GetSoundCurrentPitch(/* 0x0(sp) */ UInt32 handle) {
-    /* -0x18(sp) */ SInt32 type;
-    /* -0x14(sp) */ SInt32 ret_val;
+    /* -0x18(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    /* -0x14(sp) */ SInt32 ret_val = 0;
     /* -0x10(sp) */ VAGSoundHandlerPtr hand;
+
+    snd_LockMasterTick(1282);
+    if (type == HANDLER_UNK || type == HANDLER_BLOCK) {
+        hand = snd_CheckHandlerStillActive(handle);
+        if (hand != NULL) {
+            ret_val = (hand->Current_Note << 7) + hand->Current_Fine;
+        }
+    }
+    snd_UnlockMasterTick();
+
+    return ret_val;
 }
 
 /* 0001b3b4 0001b4b4 */ SInt32 snd_GetSoundPitchBend(/* 0x0(sp) */ UInt32 handle) {
-    /* -0x18(sp) */ SInt32 type;
-    /* -0x14(sp) */ SInt32 ret_val;
+    /* -0x18(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    /* -0x14(sp) */ SInt32 ret_val = 0;
     /* -0x10(sp) */ VAGSoundHandlerPtr hand;
+
+    snd_LockMasterTick(1283);
+    switch (type) {
+    case HANDLER_BLOCK:
+        hand = snd_CheckHandlerStillActive(handle);
+        if (hand != NULL) {
+            ret_val = ((BlockSoundHandlerPtr)hand)->App_PB;
+        }
+        break;
+    default:
+        hand = snd_CheckHandlerStillActive(handle);
+        if (hand != NULL) {
+            ret_val = hand->Current_PB;
+        }
+        break;
+    }
+    snd_UnlockMasterTick();
+    return ret_val;
 }
 
 /* 0001b4b4 0001b564 */ void snd_SetSoundPitch(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 pitch) {
-    /* -0x10(sp) */ SInt32 type;
+    /* -0x10(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    snd_LockMasterTick(1284);
+    if (type == HANDLER_BLOCK) {
+        snd_SetSFXPitch(handle, pitch);
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001b564 0001b61c */ void snd_SetSoundPitchBend(/* 0x0(sp) */ UInt32 handle, /* -0x10(sp) */ SInt16 bend) {
-    /* -0xc(sp) */ SInt32 type;
+    /* -0xc(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    snd_LockMasterTick(1285);
+    if (type == HANDLER_BLOCK) {
+        snd_SetSFXPitchbend(handle, bend);
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001b61c 0001b730 */ void snd_SetSoundPitchModifier(/* 0x0(sp) */ UInt32 handle, /* -0x10(sp) */ SInt16 mod) {
-    /* -0xc(sp) */ SInt32 type;
+    /* -0xc(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    snd_LockMasterTick(1286);
+    switch (type) {
+    case HANDLER_MIDI:
+        snd_SetMIDISoundPitchModifier(handle, mod);
+        break;
+    case HANDLER_AME:
+        snd_SetAMESoundPitchModifier(handle, mod);
+        break;
+    case HANDLER_VAG:
+        snd_SetVagStreamPitchModifier(handle, mod);
+        break;
+    case HANDLER_BLOCK:
+        snd_SetSFXPitchModifier(handle, mod);
+    default:
+        break;
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001b730 0001b7fc */ SInt8 snd_GetSoundReg(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 which) {
-    /* -0x10(sp) */ SInt32 type;
-    /* -0xc(sp) */ SInt8 val;
+    /* -0x10(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    /* -0xc(sp) */ SInt8 val = 0;
+    snd_LockMasterTick(1287);
+
+    switch (type) {
+    case HANDLER_AME:
+        val = snd_GetMIDIRegister(handle, which);
+        break;
+    case HANDLER_BLOCK:
+        val = snd_GetSFXSoundReg(handle, which);
+        break;
+    }
+    snd_UnlockMasterTick();
+    return val;
 }
 
 /* 0001b7fc 0001b8c0 */ void snd_SetSoundReg(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 which, /* -0x10(sp) */ SInt8 val) {
-    /* -0xc(sp) */ SInt32 type;
+    /* -0xc(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    snd_LockMasterTick(1288);
+    switch (type) {
+    case HANDLER_AME:
+        snd_SetMIDIRegister(handle, which, val);
+        break;
+    case HANDLER_BLOCK:
+        snd_SetSFXSoundReg(handle, which, val);
+        break;
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001b8c0 0001b96c */ void snd_SetAllSoundReg(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt8 *vals) {
-    /* -0x10(sp) */ SInt32 type;
+    /* -0x10(sp) */ SInt32 type = HND_GET_TYPE(handle);
+    snd_LockMasterTick(1289);
+    switch (type) {
+    case HANDLER_AME:
+        snd_SetAllMIDIRegister(handle, vals);
+        break;
+    case HANDLER_BLOCK:
+        snd_SetAllSFXSoundReg(handle, vals);
+        break;
+    }
+    snd_UnlockMasterTick();
 }
 
 /* 0001b96c 0001ba8c */ SInt32 snd_GetSoundPitchModifier(/* 0x0(sp) */ UInt32 handle) {
     /* -0x18(sp) */ SInt32 type;
     /* -0x14(sp) */ SInt32 ret_val;
     /* -0x10(sp) */ VAGSoundHandlerPtr hand;
+
+    // BUG this function does not return anything?
+
+    return 0;
 }
 
 /* 0001ba8c 0001bb78 */ void snd_PauseSound(/* 0x0(sp) */ UInt32 handle) {
-    /* -0x10(sp) */ SInt32 type;
+    /* -0x10(sp) */ SInt32 type = HND_GET_TYPE(handle);
     /* -0xc(sp) */ GSoundHandlerPtr snd_ptr;
+    snd_LockMasterTick(1291);
+    switch (type) {
+    case HANDLER_MIDI:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_PauseHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    case HANDLER_AME:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_PauseHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    case HANDLER_VAG:
+        snd_PauseVAGStream(handle);
+        break;
+    case HANDLER_BLOCK:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_PauseHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    }
+
+    snd_UnlockMasterTick();
 }
 
 /* 0001bb78 0001bc64 */ void snd_ContinueSound(/* 0x0(sp) */ UInt32 handle) {
-    /* -0x10(sp) */ SInt32 type;
+    /* -0x10(sp) */ SInt32 type = HND_GET_TYPE(handle);
     /* -0xc(sp) */ GSoundHandlerPtr snd_ptr;
+    snd_LockMasterTick(1292);
+
+    switch (type) {
+    case HANDLER_MIDI:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_ContinueHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    case HANDLER_AME:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_ContinueHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    case HANDLER_VAG:
+        snd_ContinueVAGStream(handle);
+        break;
+    case HANDLER_BLOCK:
+        snd_ptr = snd_CheckHandlerStillActive(handle);
+        if (snd_ptr != NULL) {
+            snd_ContinueHandlerPtr(snd_ptr, 1);
+        }
+        break;
+    }
+
+    snd_UnlockMasterTick();
 }
 
 /* 0001bc64 0001bdf0 */ void snd_StopAllSoundsInBank(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 silence) {

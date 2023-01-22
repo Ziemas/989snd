@@ -22,6 +22,9 @@ enum PLAY_PARAM_FLAGS_BIT {
 
 UInt32 snd_PlaySoundVolPanPMPB(SoundBankPtr bank, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend);
 
+void snd_SetSoundPitchBend(UInt32 handle, SInt16 bend);
+void snd_SetSoundPitchModifier(UInt32 handle, SInt16 mod);
+
 void snd_StopSound(UInt32 handle);
 
 SoundBankPtr snd_FindBankByName(char *name);
