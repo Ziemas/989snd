@@ -39,6 +39,7 @@ void snd_InitSoundHandlers();
 void snd_UpdateHandlers();
 
 void snd_StopHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child, SInt32 silence, bool vlimit_stop);
+void snd_StopAllHandlersForSound(SoundPtr snd, SInt32 silence, bool vlimit_stop);
 
 SInt32 snd_UpdateEffect(EffectChainPtr effect, GSoundHandlerPtr owner);
 

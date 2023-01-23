@@ -1,4 +1,5 @@
 #include "playsnd.h"
+#include "989snd.h"
 #include "ame.h"
 #include "autopan.h"
 #include "blocksnd.h"
@@ -502,12 +503,8 @@
     snd_LockMasterTick(1291);
     switch (type) {
     case HANDLER_MIDI:
-        snd_ptr = snd_CheckHandlerStillActive(handle);
-        if (snd_ptr != NULL) {
-            snd_PauseHandlerPtr(snd_ptr, 1);
-        }
-        break;
     case HANDLER_AME:
+    case HANDLER_BLOCK:
         snd_ptr = snd_CheckHandlerStillActive(handle);
         if (snd_ptr != NULL) {
             snd_PauseHandlerPtr(snd_ptr, 1);
@@ -515,12 +512,6 @@
         break;
     case HANDLER_VAG:
         snd_PauseVAGStream(handle);
-        break;
-    case HANDLER_BLOCK:
-        snd_ptr = snd_CheckHandlerStillActive(handle);
-        if (snd_ptr != NULL) {
-            snd_PauseHandlerPtr(snd_ptr, 1);
-        }
         break;
     }
 
@@ -534,12 +525,8 @@
 
     switch (type) {
     case HANDLER_MIDI:
-        snd_ptr = snd_CheckHandlerStillActive(handle);
-        if (snd_ptr != NULL) {
-            snd_ContinueHandlerPtr(snd_ptr, 1);
-        }
-        break;
     case HANDLER_AME:
+    case HANDLER_BLOCK:
         snd_ptr = snd_CheckHandlerStillActive(handle);
         if (snd_ptr != NULL) {
             snd_ContinueHandlerPtr(snd_ptr, 1);
@@ -547,13 +534,6 @@
         break;
     case HANDLER_VAG:
         snd_ContinueVAGStream(handle);
-        break;
-    case HANDLER_BLOCK:
-        snd_ptr = snd_CheckHandlerStillActive(handle);
-        if (snd_ptr != NULL) {
-            snd_ContinueHandlerPtr(snd_ptr, 1);
-        }
-        break;
     }
 
     snd_UnlockMasterTick();
@@ -561,43 +541,172 @@
 
 /* 0001bc64 0001bdf0 */ void snd_StopAllSoundsInBank(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 silence) {
     /* -0x10(sp) */ SInt32 x;
-    /* -0xc(sp) */ SFXBlock2Ptr block;
+    /* -0xc(sp) */ SFXBlock2Ptr block = (SFXBlock2Ptr)bank;
+
+    if (bank == NULL) {
+        return;
+    }
+
+    snd_LockMasterTick(1293);
+    if (bank->DataID == SBLK_ID) {
+        for (x = 0; x < block->NumSounds; x++) {
+            snd_StopAllHandlersForSound(&block->FirstSound[x], silence, 0);
+        }
+    } else {
+        for (x = 0; x < bank->NumSounds; x++) {
+            snd_StopAllHandlersForSound(&bank->FirstSound[x], silence, 0);
+        }
+    }
+    snd_UnlockMasterTick();
 }
 
-/* 0001bdf0 0001be50 */ void snd_SetGlobalExcite(/* 0x0(sp) */ SInt32 value) {}
-/* 0001be50 0001be88 */ SInt32 snd_GetGlobalExcite() {}
+/* 0001bdf0 0001be50 */ void snd_SetGlobalExcite(/* 0x0(sp) */ SInt32 value) {
+    if (value >= 128) {
+        value = 127;
+    }
+    if (value < 0) {
+        value = 0;
+    }
+    gGlobalExcite = value;
+}
+
+/* 0001be50 0001be88 */ SInt32 snd_GetGlobalExcite() {
+    return gGlobalExcite;
+}
+
 /* 0001be88 0001bf88 */ SoundBankPtr snd_FindBankByName(/* 0x0(sp) */ char *name) {
-    /* -0x10(sp) */ SFXBlock2Ptr walk;
-    /* -0xc(sp) */ UInt32 *comp;
+    /* -0x10(sp) */ SFXBlock2Ptr walk = gBlockListHead;
+    /* -0xc(sp) */ UInt32 *comp = (UInt32 *)name;
+
+    for (; walk != NULL; walk = walk->NextBlock) {
+        if ((walk->Flags & 0x100) == 0) {
+            continue;
+        }
+
+        if (walk->BlockNames->BlockName[0] == comp[0] &&
+            walk->BlockNames->BlockName[1] == comp[1]) {
+            return walk;
+        }
+    }
+
+    return NULL;
 }
 
 /* 0001bf88 0001c300 */ SInt32 snd_FindSoundByName(/* 0x0(sp) */ SFXBlock2Ptr block, /* 0x4(sp) */ char *name, /* 0x8(sp) */ SFXBlock2Ptr *found_block) {
     /* -0x28(sp) */ UInt32 *buffer;
     /* -0x24(sp) */ SInt32 index;
     /* -0x20(sp) */ SFXNamePtr snd_names;
-    /* -0x1c(sp) */ SInt32 count;
+    /* -0x1c(sp) */ SInt32 count = 0;
     /* -0x18(sp) */ SFXBlock2Ptr walk;
+
+    if (block != NULL) {
+        if (block->DataID != SBLK_ID || (block->Flags & 0x100) == 0) {
+            return -1;
+        }
+        snd_names = (SFXNamePtr)block->BlockNames->SFXNameTableOffset;
+        index = block->BlockNames->SFXHashOffsets[snd_CalcSoundNameHash(name)];
+        while (snd_names[index].Name[0] != 0) {
+            buffer = (UInt32 *)name;
+            if (snd_names[index].Name[0] == buffer[0] &&
+                snd_names[index].Name[1] == buffer[1] &&
+                snd_names[index].Name[2] == buffer[2] &&
+                snd_names[index].Name[3] == buffer[3]) {
+                break;
+            }
+
+            index++;
+        }
+
+        if (found_block != NULL) {
+            *found_block = block;
+        }
+
+        return snd_names[index].Index;
+    } else {
+        for (walk = gBlockListHead; walk != NULL; walk = walk->NextBlock) {
+            index = snd_FindSoundByName(walk, name, found_block);
+            if (index >= 0) {
+                *found_block = walk;
+                return index;
+            }
+        }
+
+        return -1;
+    }
 }
 
 /* 0001c300 0001c3e0 */ SInt32 snd_CalcSoundNameHash(/* 0x0(sp) */ char *name) {
     /* -0x10(sp) */ SInt32 ret;
+    ret = name[0] + name[4] + name[8] + name[12];
+    if (ret < 0) {
+        ret = -ret;
+    }
+
+    return ret % 32;
 }
 
 /* 0001c3e0 0001c5f4 */ SInt32 snd_CollectTones(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 prog, /* 0x8(sp) */ SInt32 key, /* 0xc(sp) */ TonePtr *tones) {
     /* -0x18(sp) */ SInt32 x;
     /* -0x14(sp) */ SInt32 tones_in_prog;
     /* -0x10(sp) */ TonePtr tone_list;
-    /* -0xc(sp) */ SInt32 tone_count;
+    /* -0xc(sp) */ SInt32 tone_count = 0;
+    if (prog >= bank->NumProgs) {
+        snd_ShowError(78, 0, 0, 0, 0);
+        return 0;
+    }
+
+    tones_in_prog = bank->FirstProg[prog].NumTones;
+    tone_list = bank->FirstProg[prog].FirstTone;
+
+    for (x = 0; x < tones_in_prog && x < 32; x++) {
+        if (key >= tone_list[x].MapLow && key < tone_list[x].MapHigh) {
+            tones[tone_count++] = &tone_list[x];
+        }
+    }
+
+    return tone_count;
 }
 
 /* 0001c5f4 0001c720 */ void snd_DEBUG_SoloSound(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 sound) {
     /* -0x10(sp) */ SInt32 x;
+    if (bank == NULL) {
+        return;
+    }
+
+    for (x = 0; x < 8; x++) {
+        gSoloBank[x] = bank;
+        gSoloSound[x] = sound;
+        gNumSoloSounds++;
+
+        return;
+    }
+
+    printf("snd_DEBUG_SoloSound: No open solo slots!\n");
 }
 
 /* 0001c720 0001c868 */ SInt32 snd_DEBUG_CheckSolo(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt32 sound) {
     /* -0x10(sp) */ SInt32 x;
+    if (bank == NULL) {
+        return 0;
+    }
+
+    if (gNumSoloSounds == 0) {
+        return 1;
+    }
+
+    for (x = 0; x < 8; x++) {
+        if (gSoloBank[x] == bank && (gSoloSound[x] == sound || gSoloSound[x] == -1)) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 /* 0001c868 0001c8e8 */ void snd_DEBUG_ClearSolo() {
     /* -0x10(sp) */ SInt32 x;
+    gNumSoloSounds = 0;
+    for (x = 0; x < 8; x++) {
+        gSoloBank[x] = 0;
+    }
 }

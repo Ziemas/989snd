@@ -30,5 +30,8 @@ void snd_StopSound(UInt32 handle);
 SoundBankPtr snd_FindBankByName(char *name);
 SInt32 snd_FindSoundByName(SFXBlock2Ptr block, char *name, SFXBlock2Ptr *found_block);
 
+SInt32 snd_CalcSoundNameHash(char *name);
+
 SInt32 snd_DEBUG_CheckSolo(SoundBankPtr bank, SInt32 sound);
+
 #endif // PLAYSND_H_
