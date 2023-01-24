@@ -7,6 +7,7 @@
 
 void snd_SRAMInitMalloc();
 
+UInt32 snd_SRAMMallocRev(UInt32 size);
 void snd_SRAMFree(UInt32 loc, UInt32 size);
 sSRAMNodePtr snd_SRAMSearch(sSRAMNodePtr root, UInt32 size);
 void snd_SRAMRemoveNode(sSRAMNodePtr node);

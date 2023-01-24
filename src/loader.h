@@ -28,4 +28,7 @@ void snd_UnloadAllMMD();
 
 void snd_WaitDMADone();
 
+SInt32 snd_GetFreeSPUDMA();
+void snd_FreeSPUDMA(SInt32 ch);
+
 #endif // LOADER_H_
