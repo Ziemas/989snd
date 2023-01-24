@@ -254,17 +254,58 @@
 
 /* data 15d0 */ static UInt32 seed = 1;
 
+/* 0001a074 0001a0a8 */ static void mysrand(/* -0x10(sp) */ UInt16 newseed) {
+    seed = newseed;
+}
+
+/* 0001a008 0001a074 */ static UInt16 myrand() {
+    seed = 0x15A4E35 * seed + 1;
+    return (seed >> 16) & 0x7fff;
+}
+
 /* 00019c80 00019ee8 */ void snd_RandInit(/* -0x18(sp) */ SInt16 seed) {
     /* -0x16(sp) */ SInt16 j;
     /* -0x14(sp) */ SInt16 k;
     /* -0x12(sp) */ UInt16 mask;
     /* -0x10(sp) */ UInt16 msb;
+
+    mysrand(seed);
+    r250_index = 0;
+    for (int i = 0; i < 250; i++) {
+        r250_buffer[i] = myrand();
+    }
+
+    for (int i = 0; i < 250; i++) {
+        if (myrand() > 0x4000) {
+            r250_buffer[i] |= 0x8000;
+        }
+    }
+    msb = 0x8000;
+    mask = 0xFFFF;
+    for (int i = 0; i < 16; i++) {
+        r250_buffer[11 * i + 3] &= mask;
+        r250_buffer[11 * i + 3] |= msb;
+        mask >>= 1;
+        msb >>= 1;
+    }
 }
 
 /* 00019ee8 0001a008 */ UInt16 snd_RandomUInt16() {
     /* v1 3 */ SInt32 j;
     /* a0 4 */ UInt32 new_rand;
-}
 
-/* 0001a008 0001a074 */ static UInt16 myrand() {}
-/* 0001a074 0001a0a8 */ static void mysrand(/* -0x10(sp) */ UInt16 newseed) {}
+    if (r250_index < 147) {
+        j = r250_index + 103;
+    } else {
+        j = r250_index - 147;
+    }
+    new_rand = r250_buffer[r250_index] ^ r250_buffer[j];
+    r250_buffer[r250_index] = new_rand;
+    if (r250_index < 249) {
+        r250_index++;
+    } else {
+        r250_index = 0;
+    }
+
+    return new_rand;
+}
