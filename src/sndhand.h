@@ -41,6 +41,10 @@ void snd_UpdateHandlers();
 void snd_StopHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child, SInt32 silence, bool vlimit_stop);
 void snd_StopAllHandlersForSound(SoundPtr snd, SInt32 silence, bool vlimit_stop);
 
+MIDIHandlerPtr snd_GetFreeMIDIHandler();
+
+void snd_ActivateHandler(GSoundHandlerPtr snd);
+
 SInt32 snd_UpdateEffect(EffectChainPtr effect, GSoundHandlerPtr owner);
 
 GSoundHandlerPtr snd_CheckHandlerStillActive(UInt32 handle);

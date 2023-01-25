@@ -131,7 +131,6 @@
 }
 
 /* 0001deec 0001df40 */ MIDIHandlerPtr snd_GetFreeMIDIHandler() {
-
     return (MIDIHandlerPtr)snd_FindFreeHandler(&gMIDIHandler[0].SH, NUM_MIDI_HANDLER, HANDLER_MIDI, sizeof(struct MIDIHandler));
 }
 
