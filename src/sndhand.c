@@ -53,7 +53,7 @@
     dis = CpuSuspendIntr(&intr_state);
     for (x = 0; x < count; x++) {
         if (handlers->Sound == NULL) {
-            handlers->OwnerID = (handlers->OwnerID + 1) | (x << 16) | (type << 24);
+            handlers->OwnerID = ((handlers->OwnerID & 0xffff) + 1) | (x << 16) | (type << 24);
             handlers->next = NULL;
             handlers->prev = NULL;
             handlers->parent = NULL;
@@ -63,6 +63,7 @@
             if (!dis) {
                 CpuResumeIntr(intr_state);
             }
+
             return handlers;
         }
 
