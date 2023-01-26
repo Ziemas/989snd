@@ -12,6 +12,8 @@ enum {
 };
 
 void snd_InitDuckers();
+
+SInt16 snd_MIDITo360Pan(SInt8 pan);
 void snd_CheckDuckers();
 
 void snd_SetMasterVolume(SInt32 which, SInt32 vol);
@@ -22,4 +24,8 @@ void snd_AdjustAllChannelsMasterVolume(UInt32 flags);
 
 void snd_SetPlaybackMode(SInt32 mode);
 
+void snd_MakeVolumesB(SInt32 bank_vol, SInt32 snd_vol,
+                      SInt32 snd_pan, SInt32 prog_vol,
+                      SInt32 prog_pan, SInt32 tone_vol,
+                      SInt32 tone_pan, SpuVolume *spu_vol);
 #endif // VOL_H_

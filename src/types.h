@@ -608,7 +608,7 @@ struct VolumeModEffect { // 0x2c
     /* 0x28 */ SInt32 depth_slider_connect;
 };
 
-typedef void (*OwnerProcPtr)(/* parameters unknown */);
+typedef void (*OwnerProcPtr)(SInt32 voice, UInt32 owner, SInt32 flag);
 
 struct GenericSoundHandler { // 0x34
     /* 0x00 */ UInt32 OwnerID;

@@ -4,6 +4,7 @@
 #include "types.h"
 #include <stdbool.h>
 
+extern UInt32 gMicsPerTick;
 extern bool gPrefs_ShowMissingSounds;
 extern bool gPrefs_Silent;
 

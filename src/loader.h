@@ -23,6 +23,8 @@ SoundBankPtr snd_BankLoadFromIOPEx(void *iop_loc, UInt32 spu_mem_loc, UInt32 spu
 MultiMIDIBlockHeaderPtr snd_MMDLoad(SInt8 *name, SInt32 offset);
 MultiMIDIBlockHeaderPtr snd_MMDLoadByLoc(SInt32 sect_loc, SInt32 file_offset);
 
+SoundBankPtr snd_FindBankByNum(SInt8 num);
+
 void snd_UnloadAllBanks();
 void snd_UnloadAllMMD();
 

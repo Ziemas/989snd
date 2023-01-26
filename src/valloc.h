@@ -29,6 +29,7 @@ SInt32 snd_LockVoiceAllocatorEx(bool block, UInt32 ownerID);
 void snd_UnlockVoiceAllocator();
 
 SInt32 snd_AllocateVoice(SInt32 vol_group, SInt32 priority);
+void snd_StartVAGVoice(SInt32 voice, bool noise);
 
 void snd_PitchBendTone(TonePtr tone, SInt32 pb, SInt32 pm, SInt32 note, SInt32 fine, SInt32 *new_note, SInt32 *new_fine);
 UInt16 PS1Note2Pitch(SInt8 center_note, SInt8 center_fine, UInt16 note, SInt16 fine);

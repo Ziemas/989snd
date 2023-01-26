@@ -32,6 +32,8 @@ SInt32 snd_FindSoundByName(SFXBlock2Ptr block, char *name, SFXBlock2Ptr *found_b
 
 SInt32 snd_CalcSoundNameHash(char *name);
 
+SInt32 snd_CollectTones(SoundBankPtr bank, SInt32 prog, SInt32 key, TonePtr *tones);
+
 SInt32 snd_DEBUG_CheckSolo(SoundBankPtr bank, SInt32 sound);
 
 #endif // PLAYSND_H_
