@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+extern SInt32 gTransfering;
+extern SpuTransferCallbackProc gTransferDoneCallback;
+extern SInt32 gSPURAMTransSema;
 extern bool gKillTimer;
 extern SInt32 gCdBusy;
 extern SInt32 gCdBusyTime;

@@ -1,4 +1,8 @@
 #include "loader.h"
+#include "989snd.h"
+#include "intr_code.h"
+#include "ioman.h"
+#include "sysclib.h"
 #include "types.h"
 
 /* data 1344 */ bool gLimit2Meg = false;
@@ -27,36 +31,269 @@
 
 /* 0001022c 0001030c */ void snd_InitLoader() {
     /* -0x18(sp) */ SemaParam sp;
+    memset(&sp, 0, sizeof(sp));
+    sp.max = 1;
+    gSPURAMTransSema = CreateSema(&sp);
+    if (gSPURAMTransSema < 0) {
+        snd_ShowError(115, 0, 0, 0, 0);
+        while (true)
+            ;
+    }
+    gTransfering = 0;
+    gTransferDoneCallback = NULL;
+    gBankListHead = NULL;
+    gBlockListHead = NULL;
+    gMIDIListHead = NULL;
+    gAllocProc = snd_IOPMemAlloc;
+    gFreeProc = snd_IOPMemFree;
 }
 
-/* 0001030c 00010350 */ void snd_ShutdownLoader() {}
-/* 00010350 000103e0 */ void snd_RegisterIOPMemAllocator(/* 0x0(sp) */ ExternSndIOPAlloc AllocProc, /* 0x4(sp) */ ExternSndIOPFree FreeProc) {}
-/* 000103e0 0001047c */ bool snd_OpenDataSourceByName(/* 0x0(sp) */ char *name, /* 0x4(sp) */ SInt32 offset) {}
-/* 0001047c 00010504 */ bool snd_OpenDataSourceByLoc(/* 0x0(sp) */ SInt32 sector, /* 0x4(sp) */ SInt32 offset) {}
-/* 00010504 00010564 */ bool snd_OpenDataSourceFromEE(/* 0x0(sp) */ UInt32 ee_loc) {}
-/* 00010564 00010624 */ void snd_CloseDataSource() {}
-/* 00010624 000108b8 */ SInt32 snd_SeekDataSource(/* 0x0(sp) */ SInt32 where, /* 0x4(sp) */ SInt32 from_where) {}
-/* 000108b8 00010984 */ void snd_SetDataSourceMark() {}
-/* 00010984 000109bc */ SInt32 snd_GetLastLoadError() {}
+/* 0001030c 00010350 */ void snd_ShutdownLoader() {
+    DeleteSema(gSPURAMTransSema);
+    gSPURAMTransSema = -1;
+}
+
+/* 00010350 000103e0 */ void snd_RegisterIOPMemAllocator(/* 0x0(sp) */ ExternSndIOPAlloc AllocProc, /* 0x4(sp) */ ExternSndIOPFree FreeProc) {
+    if (AllocProc) {
+        gAllocProc = AllocProc;
+    } else {
+        gAllocProc = snd_IOPMemAlloc;
+    }
+
+    if (FreeProc) {
+        gFreeProc = FreeProc;
+    } else {
+        gFreeProc = snd_IOPMemFree;
+    }
+}
+
+/* 000103e0 0001047c */ bool snd_OpenDataSourceByName(/* 0x0(sp) */ char *name, /* 0x4(sp) */ SInt32 offset) {
+    gFileHandle = open(name, O_RDONLY);
+    if (gFileHandle < 0) {
+        return false;
+    }
+    gFileStartOffset = offset;
+    lseek(gFileHandle, offset, SEEK_SET);
+    return true;
+}
+
+/* 0001047c 00010504 */ bool snd_OpenDataSourceByLoc(/* 0x0(sp) */ SInt32 sector, /* 0x4(sp) */ SInt32 offset) {
+    gFileStartSector = sector;
+    gFileStartOffset = offset;
+    gFileNextReadSector = sector;
+    gFileNextReadOffset = offset;
+    gFileMarkSector = sector;
+    gFileMarkOffset = offset;
+    gFileHandle = 1;
+    return true;
+}
+
+/* 00010504 00010564 */ bool snd_OpenDataSourceFromEE(/* 0x0(sp) */ UInt32 ee_loc) {
+    gEEDataLocNext = ee_loc;
+    gEEDataLocNext = ee_loc;
+    gEEDataMark = ee_loc;
+    gFileHandle = 2;
+    return true;
+}
+
+/* 00010564 00010624 */ void snd_CloseDataSource() {
+    if (gFileHandle == -1) {
+        return;
+    }
+
+    if (gFileHandle != 0) {
+        gFileStartSector = 0;
+        gFileStartOffset = 0;
+        gFileNextReadSector = 0;
+        gFileStartOffset = 0;
+    } else if (gEEDataLocStart != 0) {
+        gEEDataLocStart = 0;
+    } else {
+        close(gFileHandle);
+    }
+
+    gFileHandle = -1;
+}
+
+/* 00010624 000108b8 */ SInt32 snd_SeekDataSource(/* 0x0(sp) */ SInt32 where, /* 0x4(sp) */ SInt32 from_where) {
+    if (gFileHandle == -1) {
+        return 0;
+    }
+
+    if (gFileStartSector) {
+        if (from_where) {
+            gFileNextReadSector = gFileMarkSector;
+            gFileNextReadOffset = gFileMarkOffset + where;
+        } else {
+            gFileNextReadSector = gFileStartSector;
+            gFileNextReadOffset = gFileStartOffset + where;
+        }
+        if (gFileNextReadOffset >= 2048) {
+            gFileNextReadSector += gFileNextReadOffset / 2048;
+            gFileNextReadOffset %= 2048;
+        }
+        return where;
+    }
+
+    if (gEEDataLocStart) {
+        if (from_where) {
+            gEEDataLocNext = gEEDataMark + where;
+        } else {
+            gEEDataLocNext = gEEDataLocStart + where;
+        }
+
+        return gEEDataLocNext;
+    }
+
+    if (from_where) {
+        return lseek(gFileHandle, where + gFileMarkOffset, 0);
+    } else {
+        return lseek(gFileHandle, where + gFileStartOffset, 0);
+    }
+
+    return 0;
+}
+
+/* 000108b8 00010984 */ void snd_SetDataSourceMark() {
+    if (gFileHandle == -1) {
+        return;
+    }
+
+    if (gFileStartSector) {
+        gFileMarkSector = gFileNextReadSector;
+        gFileMarkOffset = gFileNextReadOffset;
+
+        return;
+    }
+
+    if (gEEDataLocStart) {
+        gEEDataMark = gEEDataLocNext;
+
+        return;
+    }
+
+    gFileMarkOffset = lseek(gFileHandle, 0, SEEK_CUR);
+}
+
+/* 00010984 000109bc */ SInt32 snd_GetLastLoadError() {
+    return gLastLoadError;
+}
+
 /* 000109bc 00010c88 */ SInt32 snd_ReadBytesFromEE(/* 0x0(sp) */ UInt32 ee_loc, /* 0x4(sp) */ void *iop_loc, /* 0x8(sp) */ SInt32 bytes) {
     /* -0x38(sp) */ SInt32 ret;
     /* -0x34(sp) */ sceSifReceiveData data_track;
     /* -0x18(sp) */ SInt32 full_blocks;
-    /* -0x14(sp) */ SInt32 get_blocks;
+    /* -0x14(sp) */ SInt32 get_blocks = 0;
     /* -0x10(sp) */ SInt32 read_bytes;
     /* -0xc(sp) */ SInt32 part_size;
+
+    if ((ee_loc & 0xf) != 0) {
+        part_size = 16 - (ee_loc & 0xF);
+        ee_loc -= ee_loc & 0xF;
+
+        if (sceSifGetOtherData(&data_track, (void *)ee_loc, &gEEAlignBuffer, 16, 0) < 0) {
+            return 0;
+        }
+
+        memcpy(iop_loc, &gFileLoadBuffer - part_size, part_size);
+        bytes -= part_size;
+        iop_loc += part_size;
+        ee_loc += 16;
+    }
+
+    for (full_blocks = bytes / 16; full_blocks != 0; full_blocks -= get_blocks) {
+        get_blocks = full_blocks;
+        if (full_blocks >= 0x4000) {
+            get_blocks = 0x3FFF;
+        }
+
+        if (sceSifGetOtherData(&data_track, (void *)ee_loc, iop_loc, 16 * get_blocks, 0) < 0) {
+            return 0;
+        }
+
+        bytes -= 16 * get_blocks;
+        iop_loc += 16 * get_blocks;
+        ee_loc += 16 * get_blocks;
+    }
+
+    if (bytes != 0) {
+        if (sceSifGetOtherData(&data_track, (void *)ee_loc, &gEEAlignBuffer, 16, 0) < 0) {
+            return 0;
+        }
+
+        memcpy(iop_loc, &gEEAlignBuffer, bytes);
+    }
+
+    return bytes;
 }
 
 /* 00010c88 00010ecc */ SInt32 snd_ReadBytes(/* 0x0(sp) */ void *buffer, /* 0x4(sp) */ SInt32 count) {
     /* -0x10(sp) */ SInt32 ret;
+
+    if (gFileHandle == -1) {
+        return 0;
+    }
+
+    if (gFileStartSector != 0) {
+        if (snd_FileRead(gFileNextReadSector, gFileNextReadOffset, count, buffer)) {
+            gFileNextReadOffset += count;
+            if (gFileNextReadOffset >= 2048) {
+                gFileNextReadSector += gFileNextReadOffset / 2048;
+                gFileNextReadOffset %= 2048;
+            }
+            return count;
+        }
+
+        return 0;
+    }
+
+    if (gEEDataLocStart != 0) {
+        ret = snd_ReadBytesFromEE(gEEDataLocNext, buffer, count);
+        if (ret == count) {
+            gEEDataLocNext += count;
+            return ret;
+        }
+
+        gLastLoadError = 257;
+        return 0;
+    }
+
+    ret = read(gFileHandle, buffer, count);
+    if (ret != count) {
+        gLastLoadError = 257;
+    }
+
+    return ret;
 }
 
 /* 00010ecc 00010fcc */ SoundBankPtr snd_BankLoadEx(/* 0x0(sp) */ SInt8 *name, /* 0x4(sp) */ SInt32 offset, /* 0x8(sp) */ UInt32 spu_mem_loc, /* 0xc(sp) */ UInt32 spu_mem_size) {
     /* -0x10(sp) */ SoundBankPtr ret;
+
+    if (snd_OpenDataSourceByName(name, offset) == false) {
+        gLastLoadError = 256;
+        return 0;
+    }
+
+    gLastLoadError = 0;
+    ret = snd_ReadBank(spu_mem_loc, spu_mem_size);
+    snd_CloseDataSource();
+    if (ret != NULL && g989Monitor != NULL) {
+        if (g989Monitor->bnk_load != NULL) {
+            g989Monitor->bnk_load(ret, 1);
+        }
+    }
+
+    return ret;
 }
 
 /* 00010fcc 00011098 */ void snd_IterateBlockListToMonitor() {
     /* -0x10(sp) */ SFXBlock2Ptr block;
+
+    if (g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        for (block = gBlockListHead; block != NULL; block = block->NextBlock) {
+            g989Monitor->bnk_load(block, 1);
+        }
+    }
 }
 
 /* 00011098 000114c4 */ SoundBankPtr snd_ParseIOPBank(/* 0x0(sp) */ SInt8 *iop_loc, /* 0x4(sp) */ UInt32 spu_mem_loc, /* 0x8(sp) */ UInt32 spu_mem_size) {
@@ -67,6 +304,72 @@
     /* -0x18(sp) */ FileAttributesPtr fa;
     /* -0x14(sp) */ SInt32 size;
     /* -0x10(sp) */ SInt8 *data_loc;
+    fa = iop_loc;
+
+    if (fa->type != 1 && fa->type != 3) {
+        snd_ShowError(84, 0, 0, 0, 0);
+        gLastLoadError = 263;
+        return NULL;
+    }
+
+    size = fa->where[0].size;
+    if (fa->num_chunks >= 3) {
+        size += 4;
+    }
+
+    bank_head_ram = gAllocProc(size, 1, 0);
+    if (bank_head_ram == NULL) {
+        snd_ShowError(15, size, 0, 0, 0);
+        gLastLoadError = 258;
+        return NULL;
+    }
+
+    if (fa->num_chunks == 3) {
+        bank_head = (SoundBankPtr)(bank_head_ram + 4);
+        block = (SFXBlock2Ptr)(bank_head_ram + 4);
+        memcpy(bank_head, iop_loc + fa->where[0].offset, fa->where[0].size);
+    } else {
+        bank_head = (SoundBankPtr)bank_head_ram;
+        block = (SFXBlock2Ptr)bank_head_ram;
+        memcpy(bank_head, iop_loc + fa->where[0].offset, fa->where[0].size);
+    }
+
+    if (fa->where[1].size != 0) {
+        snd_BankTransfer(bank_head,
+                         iop_loc + fa->where[1].offset,
+                         fa->where[1].size,
+                         0,
+                         0,
+                         spu_mem_loc,
+                         spu_mem_size,
+                         NULL);
+        snd_IsCurrentTransferComplete(true);
+        snd_EndBankTransfer(bank_head);
+    } else {
+        if (bank_head->DataID == SBV2_ID) {
+            bank_head->FirstSound = (SoundPtr)((SInt8 *)bank_head->FirstSound + (UInt32)bank_head);
+            bank_head->FirstProg = (ProgPtr)((SInt8 *)bank_head->FirstProg + (UInt32)bank_head);
+            bank_head->FirstTone = (TonePtr)((SInt8 *)bank_head->FirstTone + (UInt32)bank_head);
+        } else {
+            block->FirstSound = (SFX2Ptr)((SInt8 *)block->FirstSound + (UInt32)bank_head);
+            block->FirstGrain = (SFXGrain2Ptr)((SInt8 *)block->FirstGrain + (UInt32)bank_head);
+        }
+        bank_head->Flags |= 1;
+        snd_EndBankTransfer(bank_head);
+    }
+
+    if (fa->num_chunks == 3) {
+        bank_head_ram = snd_MMDLoadFromIOPLoc(iop_loc + fa->where[2].offset);
+        if (((MIDIBlockHeaderPtr)bank_head_ram)->DataID == 0) {
+            snd_RemoveBank(bank_head);
+            gFreeProc(bank_head_ram);
+            snd_ShowError(19, 0, 0, 0, 0);
+            return NULL;
+        }
+        bank_head->Flags |= 8;
+    }
+
+    return bank_head;
 }
 
 /* 000114c4 00011d1c */ SoundBankPtr snd_ReadBank(/* 0x0(sp) */ UInt32 spu_mem_loc, /* 0x4(sp) */ UInt32 spu_mem_size) {
