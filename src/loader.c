@@ -1,7 +1,15 @@
 #include "loader.h"
 #include "989snd.h"
+#include "blocksnd.h"
 #include "intr_code.h"
+#include "intrman.h"
 #include "ioman.h"
+#include "midi.h"
+#include "playsnd.h"
+#include "sndhand.h"
+#include "sram.h"
+#include "stick.h"
+#include "stream.h"
 #include "sysclib.h"
 #include "types.h"
 
@@ -314,6 +322,7 @@
 
     size = fa->where[0].size;
     if (fa->num_chunks >= 3) {
+        // make room for putting the MMD ptr before the bank.
         size += 4;
     }
 
@@ -326,11 +335,9 @@
 
     if (fa->num_chunks == 3) {
         bank_head = (SoundBankPtr)(bank_head_ram + 4);
-        block = (SFXBlock2Ptr)(bank_head_ram + 4);
         memcpy(bank_head, iop_loc + fa->where[0].offset, fa->where[0].size);
     } else {
         bank_head = (SoundBankPtr)bank_head_ram;
-        block = (SFXBlock2Ptr)bank_head_ram;
         memcpy(bank_head, iop_loc + fa->where[0].offset, fa->where[0].size);
     }
 
@@ -351,6 +358,7 @@
             bank_head->FirstProg = (ProgPtr)((SInt8 *)bank_head->FirstProg + (UInt32)bank_head);
             bank_head->FirstTone = (TonePtr)((SInt8 *)bank_head->FirstTone + (UInt32)bank_head);
         } else {
+            block = (SFXBlock2Ptr)bank_head_ram;
             block->FirstSound = (SFX2Ptr)((SInt8 *)block->FirstSound + (UInt32)bank_head);
             block->FirstGrain = (SFXGrain2Ptr)((SInt8 *)block->FirstGrain + (UInt32)bank_head);
         }
@@ -359,8 +367,9 @@
     }
 
     if (fa->num_chunks == 3) {
-        bank_head_ram = snd_MMDLoadFromIOPLoc(iop_loc + fa->where[2].offset);
-        if (((MIDIBlockHeaderPtr)bank_head_ram)->DataID == 0) {
+        // whyyyy
+        *(UInt32 *)bank_head_ram = (UInt32)snd_MMDLoadFromIOPLoc(iop_loc + fa->where[2].offset);
+        if (*(UInt32 *)bank_head_ram == 0) {
             snd_RemoveBank(bank_head);
             gFreeProc(bank_head_ram);
             snd_ShowError(19, 0, 0, 0, 0);
@@ -376,14 +385,144 @@
     /* -0x50(sp) */ SInt32 result;
     /* -0x4c(sp) */ SInt32 max_length;
     /* -0x48(sp) */ SoundBankPtr bank_head;
-    /* -0x44(sp) */ SFXBlock2Ptr block_head;
+    /* -0x44(sp) */ SFXBlock2Ptr block_head = NULL;
     /* -0x40(sp) */ SInt8 *bank_head_ram;
-    /* -0x3c(sp) */ SInt8 *bank_body;
+    /* -0x3c(sp) */ SInt8 *bank_body = NULL;
     /* -0x38(sp) */ FileAttributesPtr fa;
     /* -0x34(sp) */ SInt32 block;
     /* -0x30(sp) */ SInt32 size;
     /* -0x2c(sp) */ SInt32 sram_offset;
     /* -0x28(sp) */ SInt8 buff[32];
+
+    if (snd_ReadBytes(&buff, 32) != 32) {
+        gReadBufferHasSector = 0;
+        snd_ShowError(14, gLastLoadError, 0, 0, 0);
+        return NULL;
+    }
+
+    fa = buff;
+    if (fa->type != 1 && fa->type != 3) {
+        snd_ShowError(84, (UInt32)&buff, gFileStartSector, gReadBufferHasSector, 0);
+        gReadBufferHasSector = -1;
+        gLastLoadError = 263;
+        return 0;
+    }
+
+    size = fa->where[0].size;
+    if (fa->num_chunks >= 3) {
+        // Make room for the MMD ptr
+        size += 4;
+    }
+
+    bank_head_ram = gAllocProc(size, 1, 0);
+    if (bank_head_ram == NULL) {
+        snd_ShowError(15, size, 0, 0, 0);
+        gLastLoadError = 258;
+        return NULL;
+    }
+
+    if (fa->num_chunks == 3) {
+        bank_head = (SoundBankPtr)(bank_head_ram + 4);
+    } else {
+        bank_head = (SoundBankPtr)bank_head_ram;
+    }
+
+    if (fa->where[1].size != 0) {
+        bank_body = gAllocProc(fa->where[1].size, 8, &max_length);
+        if (fa->where[1].size < max_length) {
+            max_length = fa->where[1].size;
+        }
+
+        if (bank_body == NULL) {
+            snd_ShowError(16, 0, 0, 0, 0);
+            gFreeProc(bank_head_ram);
+            gLastLoadError = 258;
+            return NULL;
+        }
+    }
+
+    snd_SeekDataSource(fa->where[0].offset, 0);
+    if ((snd_ReadBytes(bank_head_ram, fa->where[0].size)) != fa->where[0].size) {
+        gReadBufferHasSector = 0;
+        snd_ShowError(17, gLastLoadError, 0, 0, 0);
+        gFreeProc(bank_head_ram);
+        gFreeProc(bank_body);
+        return 0;
+    }
+
+    if (bank_head->DataID == SBLK_ID && bank_head->Version < 2) {
+        snd_ShowError(113, 0, 0, 0, 0);
+        gFreeProc(bank_head_ram);
+        gFreeProc(bank_body);
+        return NULL;
+    }
+
+    if (fa->where[1].size) {
+        block = 0;
+        sram_offset = 0;
+        while (fa->where[1].size) {
+            if (snd_ReadBytes(bank_body, max_length) != max_length) {
+                gReadBufferHasSector = 0;
+                snd_ShowError(14, gLastLoadError, 0, 0, 0);
+                gFreeProc(bank_head_ram);
+                gFreeProc(bank_body);
+                return NULL;
+            }
+
+            if (block != 0) {
+                result = snd_BankTransfer(bank_head, bank_body, max_length, sram_offset, 1, spu_mem_loc, spu_mem_size, NULL);
+            } else {
+                result = snd_BankTransfer(bank_head, bank_body, max_length, 0, 0, spu_mem_loc, spu_mem_size, NULL);
+            }
+
+            if (result < 0) {
+                snd_ShowError(18, 0, 0, 0, 0);
+                gFreeProc(bank_head_ram);
+                gFreeProc(bank_body);
+                return 0;
+            }
+
+            snd_IsCurrentTransferComplete(true);
+            sram_offset += max_length;
+            block++;
+            fa->where[1].size -= max_length;
+            if (fa->where[1].size < max_length) {
+                max_length = fa->where[1].size;
+            }
+        }
+
+        snd_EndBankTransfer(bank_head);
+        gFreeProc(bank_body);
+    } else {
+        if (bank_head->DataID == SBV2_ID) {
+            bank_head->FirstSound = (SoundPtr)((SInt8 *)bank_head->FirstSound + (UInt32)bank_head);
+            bank_head->FirstProg = (ProgPtr)((SInt8 *)bank_head->FirstProg + (UInt32)bank_head);
+            bank_head->FirstTone = (TonePtr)((SInt8 *)bank_head->FirstTone + (UInt32)bank_head);
+            bank_head->Flags |= 1u;
+        } else {
+            block_head = (SFXBlock2Ptr)bank_head;
+            block_head->FirstSound = (SFX2Ptr)((SInt8 *)block_head->FirstSound + (UInt32)block_head);
+            block_head->FirstGrain = (SFXGrain2Ptr)((SInt8 *)block_head->FirstGrain + (UInt32)block_head);
+            block_head->Flags |= 1u;
+        }
+
+        snd_EndBankTransfer(bank_head);
+    }
+
+    if (fa->num_chunks == 3) {
+        snd_SeekDataSource(fa->where[2].offset, 0);
+        *(UInt32 *)bank_head_ram = (UInt32)snd_MMDLoadFromDataSource();
+        if (*(UInt32 *)bank_head_ram == 0) {
+            snd_RemoveBank(bank_head);
+            gFreeProc(bank_head_ram);
+            snd_ShowError(19, 0, 0, 0, 0);
+            return NULL;
+        }
+
+        bank_head->Flags |= 8;
+    }
+
+    return bank_head;
 }
 
 /* 00011d1c 000122a0 */ SInt32 snd_FileRead(/* 0x0(sp) */ SInt32 sect_loc, /* 0x4(sp) */ SInt32 offset, /* 0x8(sp) */ SInt32 size, /* 0xc(sp) */ SInt8 *buffer) {
@@ -393,45 +532,196 @@
     /* -0x14(sp) */ SInt32 sector;
     /* -0x10(sp) */ SInt32 get_whole_sectors;
     /* -0xc(sp) */ SInt32 err;
+
+    move_bytes = 0;
+    WaitSema(gFileReadMutex);
+    snd_StreamSafeCdSync(0);
+    snd_StreamSafeCdSync(16);
+    snd_SetCDSifReg(1, 0);
+    bytes_needed = size;
+    sector = sect_loc + offset / 2048;
+    offset %= 2048;
+
+    if (size >= 2048 && offset == 0) {
+    }
+
+    // TODO annoying messy function
+
+    return 0;
 }
 
 /* 000122a0 00012394 */ SoundBankPtr snd_BankLoadByLocEx(/* 0x0(sp) */ SInt32 sect_loc, /* 0x4(sp) */ SInt32 file_offset, /* 0x8(sp) */ UInt32 spu_mem_loc, /* 0xc(sp) */ UInt32 spu_mem_size) {
     /* -0x10(sp) */ SoundBankPtr ret;
+
+    if (!snd_OpenDataSourceByLoc(sect_loc, file_offset)) {
+        return NULL;
+    }
+
+    gLastLoadError = 0;
+    ret = snd_ReadBank(spu_mem_loc, spu_mem_size);
+    snd_CloseDataSource();
+
+    if (ret != NULL && g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        g989Monitor->bnk_load(ret, 1);
+    }
+
+    return ret;
 }
 
 /* 00012394 00012480 */ SoundBankPtr snd_BankLoadFromEEEx(/* 0x0(sp) */ UInt32 ee_loc, /* 0x4(sp) */ UInt32 spu_mem_loc, /* 0x8(sp) */ UInt32 spu_mem_size) {
     /* -0x10(sp) */ SoundBankPtr ret;
+
+    if (!snd_OpenDataSourceFromEE(ee_loc)) {
+        return NULL;
+    }
+
+    gLastLoadError = 0;
+    ret = snd_ReadBank(spu_mem_loc, spu_mem_size);
+    snd_CloseDataSource();
+
+    if (ret != NULL && g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        g989Monitor->bnk_load(ret, 1);
+    }
+
+    return ret;
 }
 
 /* 00012480 00012504 */ UInt32 snd_GetSRAMUsedByBank(/* 0x0(sp) */ SoundBankPtr bank) {
     /* -0x10(sp) */ SFXBlock2Ptr block;
+    if (bank->DataID == SBLK_ID) {
+        block = bank;
+        return block->SRAMAllocSize;
+    }
+
+    return bank->VagDataSize;
 }
 
 /* 00012504 000125cc */ SoundBankPtr snd_BankLoadFromIOPEx(/* 0x0(sp) */ void *iop_loc, /* 0x4(sp) */ UInt32 spu_mem_loc, /* 0x8(sp) */ UInt32 spu_mem_size) {
     /* -0x10(sp) */ SoundBankPtr ret;
+
+    gLastLoadError = 0;
+    ret = snd_ParseIOPBank(iop_loc, spu_mem_loc, spu_mem_size);
+    if (ret != NULL && g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        g989Monitor->bnk_load(ret, 1);
+    }
+
+    return ret;
 }
 
 /* 000125cc 00012768 */ void snd_UnloadBank(/* 0x0(sp) */ SoundBankPtr bank) {
-    /* -0x10(sp) */ SoundBankPtr mem_to_free;
+    /* -0x10(sp) */ SoundBankPtr mem_to_free = bank;
+
+    if (bank == NULL || bank == (SoundBankPtr)-1) {
+        snd_ShowError(20, 0, 0, 0, 0);
+        return;
+    }
+
+    if (bank->DataID == SBLK_ID) {
+        snd_UnloadBlock(bank);
+        return;
+    }
+
+    if (!snd_BankLoaded(bank)) {
+        snd_ShowError(21, 0, 0, 0, 0);
+        return;
+    }
+
+    if (g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        g989Monitor->bnk_load(bank, 0);
+    }
+
+    if ((bank->Flags & 8) != 0) {
+        mem_to_free = (SoundBankPtr)((SInt8 *)bank - 4);
+        snd_UnloadMMD((MultiMIDIBlockHeaderPtr)(*(UInt32 *)mem_to_free));
+    }
+
+    snd_RemoveBank(bank);
+    gFreeProc(mem_to_free);
 }
 
 /* 00012768 00012830 */ bool snd_BankLoaded(/* 0x0(sp) */ SoundBankPtr bank) {
-    /* -0x10(sp) */ SoundBankPtr walker;
+    /* -0x10(sp) */ SoundBankPtr walker = gBankListHead;
+    if (bank == NULL || bank == (SoundBankPtr)-1) {
+        return false;
+    }
+
+    while (walker != NULL) {
+        if (bank == walker) {
+            return true;
+        }
+
+        walker = walker->NextBank;
+    }
+
+    return false;
 }
 
-/* 00012830 00012904 */ void snd_UnloadBlock(/* 0x0(sp) */ SFXBlock2Ptr block) {}
+/* 00012830 00012904 */ void snd_UnloadBlock(/* 0x0(sp) */ SFXBlock2Ptr block) {
+    if (!snd_BlockLoaded(block)) {
+        snd_ShowError(22, 0, 0, 0, 0);
+        return;
+    }
+
+    if (g989Monitor != NULL && g989Monitor->bnk_load != NULL) {
+        g989Monitor->bnk_load(block, 0);
+    }
+
+    snd_RemoveBlock(block);
+    gFreeProc(block);
+}
+
 /* 00012904 000129cc */ bool snd_BlockLoaded(/* 0x0(sp) */ SFXBlock2Ptr block) {
-    /* -0x10(sp) */ SFXBlock2Ptr walker;
+    /* -0x10(sp) */ SFXBlock2Ptr walker = block;
+    if (block == NULL || block == (SFXBlock2Ptr)-1) {
+        return false;
+    }
+
+    while (walker != NULL) {
+        if (block == walker) {
+            return true;
+        }
+
+        walker = walker->NextBlock;
+    }
+
+    return false;
 }
 
 /* 000129cc 00012a48 */ MultiMIDIBlockHeaderPtr snd_MMDLoad(/* 0x0(sp) */ SInt8 *name, /* 0x4(sp) */ SInt32 offset) {
     /* -0x10(sp) */ MultiMIDIBlockHeaderPtr ret;
+    if (!snd_OpenDataSourceByName(name, offset)) {
+        return NULL;
+    }
+
+    ret = snd_MMDLoadFromDataSource();
+    snd_CloseDataSource();
+    return ret;
 }
 
 /* 00012a48 00012b90 */ MultiMIDIBlockHeaderPtr snd_MMDLoadFromIOPLoc(/* 0x0(sp) */ SInt8 *iop_loc) {
     /* -0x18(sp) */ SInt32 length;
     /* -0x14(sp) */ MultiMIDIBlockHeaderPtr mmd;
     /* -0x10(sp) */ FileAttributesPtr fa;
+    fa = (FileAttributesPtr)iop_loc;
+    length = fa->where[0].size;
+
+    mmd = gAllocProc(length, 3, 0);
+    if (mmd == NULL) {
+        snd_ShowError(23, length, 0, 0, 0);
+        gLastLoadError = 258;
+        return NULL;
+    }
+
+    memcpy(mmd, iop_loc + fa->where[0].offset, length);
+
+    if (!snd_RegisterMIDI(mmd)) {
+        gFreeProc(mmd);
+        snd_ShowError(121, 0, 0, 0, 0);
+        gLastLoadError = 263;
+        return NULL;
+    }
+
+    return mmd;
 }
 
 /* 00012b90 00012d44 */ MultiMIDIBlockHeaderPtr snd_MMDLoadFromDataSource() {
@@ -440,15 +730,65 @@
     /* -0x20(sp) */ MultiMIDIBlockHeaderPtr mmd;
     /* -0x1c(sp) */ FileAttributesPtr fa;
     /* -0x18(sp) */ SInt8 buff[16];
+
+    snd_SetDataSourceMark();
+    if (snd_ReadBytes(buff, 16) != 16) {
+        return NULL;
+    }
+
+    fa = buff;
+    length = fa->where[0].size;
+    snd_SeekDataSource(fa->where[0].offset, 1);
+
+    mmd = gAllocProc(length, 3, 0);
+    if (mmd == NULL) {
+        snd_ShowError(23, length, 0, 0, 0);
+        gLastLoadError = 258;
+        return NULL;
+    }
+
+    if (snd_ReadBytes(mmd, length) != length) {
+        gFreeProc(mmd);
+        return NULL;
+    }
+
+    if (!snd_RegisterMIDI(mmd)) {
+        gFreeProc(mmd);
+        snd_ShowError(121, 0, 0, 0, 0);
+        gLastLoadError = 263;
+        return NULL;
+    }
+
+    return mmd;
 }
 
 /* 00012d44 00012dc0 */ MultiMIDIBlockHeaderPtr snd_MMDLoadByLoc(/* 0x0(sp) */ SInt32 sect_loc, /* 0x4(sp) */ SInt32 file_offset) {
     /* -0x10(sp) */ MultiMIDIBlockHeaderPtr ret;
+
+    if (!snd_OpenDataSourceByLoc(sect_loc, file_offset)) {
+        return NULL;
+    }
+
+    ret = snd_MMDLoadFromDataSource();
+    snd_CloseDataSource();
+    return ret;
 }
 
-/* 00012dc0 00012e0c */ void snd_UnloadMMD(/* 0x0(sp) */ MultiMIDIBlockHeaderPtr mmd) {}
+/* 00012dc0 00012e0c */ void snd_UnloadMMD(/* 0x0(sp) */ MultiMIDIBlockHeaderPtr mmd) {
+    snd_UnregisterMIDI(mmd);
+    gFreeProc(mmd);
+}
+
 /* 00012e0c 00012ed4 */ void snd_UnloadAllMMD() {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
+    for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock) {
+        if (walk->DataID == MMID_ID) {
+            snd_UnloadMMD(walk);
+        }
+    }
+    while (gMIDIListHead != NULL) {
+        snd_UnloadMMD(gMIDIListHead);
+    }
 }
 
 /* 00012ed4 0001354c */ SInt32 snd_BankTransfer(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt8 *data, /* 0x8(sp) */ UInt32 data_size, /* 0xc(sp) */ SInt32 offset, /* 0x10(sp) */ SInt32 state, /* 0x14(sp) */ UInt32 spu_mem_loc, /* 0x18(sp) */ UInt32 spu_mem_size, /* 0x1c(sp) */ SpuTransferCallbackProc callback) {
@@ -460,68 +800,288 @@
     /* -0x14(sp) */ SFXBlock2Ptr block;
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
+
+    // TODO annoying big
 }
 
-/* 0001354c 000135a4 */ void snd_ClearTransSema() {}
-/* 000135a4 0001361c */ SInt32 snd_IsCurrentTransferComplete(/* 0x0(sp) */ bool wait) {}
+/* 0001354c 000135a4 */ void snd_ClearTransSema() {
+    while (PollSema(gSPURAMTransSema) != -419)
+        ;
+}
+
+/* 000135a4 0001361c */ SInt32 snd_IsCurrentTransferComplete(/* 0x0(sp) */ bool wait) {
+    if (wait) {
+        WaitSema(gSPURAMTransSema);
+    }
+
+    return gTransfering == 0;
+}
+
 /* 0001361c 00013c00 */ SInt32 snd_EndBankTransfer(/* 0x0(sp) */ SoundBankPtr bank) {
     /* -0x18(sp) */ SInt32 x;
     /* -0x14(sp) */ SFXBlock2Ptr block;
-    /* -0x10(sp) */ SoundBankPtr walker;
     /* -0x10(sp) */ TonePtr tp;
-    {
+    if (bank->DataID == SBV2_ID) {
+        /* -0x10(sp) */ SoundBankPtr walker;
+        for (x = 0; x < bank->NumTones; x++) {
+            bank->FirstTone[x].VAGInSR = (void *)((UInt32)bank->FirstTone[x].VAGInSR + (UInt32)bank->VagsInSR);
+        }
+        for (x = 0; x < bank->NumProgs; x++) {
+            bank->FirstProg[x].FirstTone = (TonePtr)((UInt32)bank->FirstProg[x].FirstTone + (UInt32)bank);
+        }
+        if (gBankListHead != NULL) {
+            for (walker = gBankListHead; walker->NextBank != NULL; walker = walker->NextBank)
+                ;
+
+            walker->NextBank = bank;
+        } else {
+            gBankListHead = bank;
+        }
+    } else {
         /* -0x10(sp) */ SFXBlock2Ptr walker;
+        block = (SFXBlock2Ptr)bank;
+
+        block->GrainData = (void *)((UInt32)block->GrainData + (UInt32)block);
+        for (x = 0; x < block->NumGrains; x++) {
+            if (block->FirstGrain[x].OpcodeData.MicroOp.Type == GRAIN_TYPE_TONE) {
+                tp = (TonePtr)((SInt8 *)block->GrainData + (block->FirstGrain[x].OpcodeData.Opcode & 0xFFFFFF));
+                tp->VAGInSR = (void *)((UInt32)tp->VAGInSR + (UInt32)block->VagsInSR);
+            }
+        }
+
+        for (x = 0; x < block->NumSounds; x++) {
+            block->FirstSound[x].FirstGrain = (SFXGrain2Ptr)((UInt32)block->FirstSound[x].FirstGrain + (UInt32)block->FirstGrain);
+            block->FirstSound[x].Flags &= ~0x4000;
+        }
+
+        if ((block->Flags & BLOCK_HAS_NAMES) != 0) {
+            block->BlockNames = (SFXBlockNamesPtr)((UInt32)block->BlockNames + (UInt32)bank);
+            block->BlockNames->SFXNameTableOffset += (UInt32)block->BlockNames->BlockName;
+            block->BlockNames->VAGNameTableOffset += (UInt32)block->BlockNames->BlockName;
+            block->BlockNames->VAGImportsTableOffset += (UInt32)block->BlockNames->BlockName;
+            block->BlockNames->VAGExportsTableOffset += (UInt32)block->BlockNames->BlockName;
+        }
+
+        if ((block->Flags & BLOCK_HAS_USERDATA) != 0) {
+            block->SFXUD = (SFXUserDatPtr)((UInt32)block->SFXUD + (UInt32)block);
+        }
+
+        if (gBlockListHead != NULL) {
+            for (walker = gBlockListHead; walker->NextBlock != NULL; walker = walker->NextBlock)
+                ;
+            walker->NextBlock = block;
+        } else {
+            gBlockListHead = block;
+        }
     }
+
+    return 0;
 }
 
 /* 00013c00 00013dac */ void snd_RemoveBank(/* 0x0(sp) */ SoundBankPtr bank) {
-    /* -0x18(sp) */ SoundBankPtr walker;
-    /* -0x14(sp) */ SoundBankPtr prev;
+    /* -0x18(sp) */ SoundBankPtr walker = gBankListHead;
+    /* -0x14(sp) */ SoundBankPtr prev = NULL;
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
+
+    if (bank->DataID == SBLK_ID) {
+        snd_RemoveBlock(bank);
+        return;
+    }
+
+    if (bank == NULL) {
+        return;
+    }
+
+    while (walker && walker != bank) {
+        prev = walker;
+        walker = walker->NextBank;
+    }
+
+    if (walker == bank) {
+        snd_StopAllSoundsInBank(bank, 1);
+        if (prev != NULL) {
+            prev->NextBank = walker->NextBank;
+        } else {
+            gBankListHead = walker->NextBank;
+        }
+
+        dis = CpuSuspendIntr(&oldstat);
+
+        if (bank->VagDataSize != 0) {
+            snd_SRAMFree((UInt32)bank->VagsInSR, bank->VagDataSize);
+        }
+
+        if (!dis) {
+            CpuResumeIntr(oldstat);
+        }
+    }
 }
 
 /* 00013dac 00013f28 */ void snd_RemoveBlock(/* 0x0(sp) */ SFXBlock2Ptr block) {
-    /* -0x18(sp) */ SFXBlock2Ptr walker;
-    /* -0x14(sp) */ SFXBlock2Ptr prev;
+    /* -0x18(sp) */ SFXBlock2Ptr walker = gBlockListHead;
+    /* -0x14(sp) */ SFXBlock2Ptr prev = NULL;
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
+
+    if (block == NULL) {
+        return;
+    }
+
+    while (walker && walker != block) {
+        prev = walker;
+        walker = walker->NextBlock;
+    }
+
+    if (walker == block) {
+        snd_StopAllSoundsInBank(block, 1);
+        if (prev != NULL) {
+            prev->NextBlock = walker->NextBlock;
+        } else {
+            gBlockListHead = walker->NextBlock;
+        }
+
+        dis = CpuSuspendIntr(&oldstat);
+
+        if (block->SRAMAllocSize != 0) {
+            snd_SRAMFree((UInt32)block->VagsInSR, block->SRAMAllocSize);
+        }
+
+        if (!dis) {
+            CpuResumeIntr(oldstat);
+        }
+    }
 }
 
-/* 00013f28 00013fbc */ void snd_UnloadAllBanks() {}
+/* 00013f28 00013fbc */ void snd_UnloadAllBanks() {
+    while (gBankListHead != NULL) {
+        snd_UnloadBank(gBankListHead);
+    }
+
+    while (gBlockListHead != NULL) {
+        snd_UnloadBlock(gBlockListHead);
+    }
+}
+
 /* 00013fbc 00014218 */ void snd_ResolveBankXREFS() {
     /* -0x18(sp) */ SoundBankPtr bank;
     /* -0x14(sp) */ SFXBlock2Ptr block;
     /* -0x10(sp) */ SInt32 x;
     /* -0xc(sp) */ MIDISoundPtr midisound;
+
+    for (bank = gBankListHead; bank != NULL; bank = bank->NextBank) {
+        for (x = 0; x < bank->NumSounds; x++) {
+            bank->FirstSound[x].Bank = bank;
+        }
+
+        if (bank->FirstSound[x].Type == SND_TYPE_MIDI || bank->FirstSound[x].Type == SND_TYPE_AME) {
+            midisound = &bank->FirstSound[x];
+            midisound->MIDIBlock = snd_FindMIDIBlock(midisound->MIDIID);
+            if (midisound->MIDIBlock == NULL) {
+                snd_ShowError(90, midisound->MIDIID, 0, 0, 0);
+            }
+        }
+
+        bank->Flags |= BFLAG_XREF_RESOLVED;
+    }
+
+    for (block = gBlockListHead; block != NULL; block = block->NextBlock) {
+        block->Flags |= BFLAG_XREF_RESOLVED;
+    }
 }
 
 /* 00014218 000142f8 */ SoundBankPtr snd_FindBankByID(/* 0x0(sp) */ UInt32 id) {
     /* -0x10(sp) */ SoundBankPtr bank;
+    for (bank = gBankListHead; bank != NULL; bank = bank->NextBank) {
+        if (bank->BankID == id) {
+            return bank;
+        }
+    }
+
+    return snd_FindBlockByID(id);
 }
 
 /* 000142f8 00014404 */ SFXBlock2Ptr snd_FindBlockByName(/* 0x0(sp) */ UInt32 *name) {
     /* -0x18(sp) */ SFXBlock2Ptr block;
     /* -0x14(sp) */ struct SFXBlockNames *names_header;
-    /* -0x10(sp) */ UInt32 *buffer;
+    /* -0x10(sp) */ UInt32 *buffer = (UInt32 *)name;
+
+    for (block = gBlockListHead; block != NULL; block = block->NextBlock) {
+        if ((block->Flags & BLOCK_HAS_NAMES) != 0) {
+            names_header = block->BlockNames;
+            if (names_header->BlockName[0] == buffer[0] && names_header->BlockName[1] == buffer[1]) {
+                return block;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 /* 00014404 000144b0 */ SFXBlock2Ptr snd_FindBlockByID(/* 0x0(sp) */ UInt32 id) {
     /* -0x10(sp) */ SFXBlock2Ptr block;
+    for (block = gBlockListHead; block != NULL; block = block->NextBlock) {
+        if (block->BlockID == id) {
+            return block;
+        }
+    }
+
+    return NULL;
 }
 
 /* 000144b0 0001459c */ SoundBankPtr snd_FindBankByNum(/* -0x10(sp) */ SInt8 num) {
     /* -0xc(sp) */ SoundBankPtr bank;
+    for (bank = gBankListHead; bank != NULL; bank = bank->NextBank) {
+        if (bank->BankNum == num) {
+            return bank;
+        }
+    }
+
+    return snd_FindBlockByNum(num);
 }
 
 /* 0001459c 0001464c */ SFXBlock2Ptr snd_FindBlockByNum(/* -0x10(sp) */ SInt8 num) {
     /* -0xc(sp) */ SFXBlock2Ptr block;
+
+    for (block = gBlockListHead; block != NULL; block = block->NextBlock) {
+        if (block->BlockNum == num) {
+            return block;
+        }
+    }
+
+    return NULL;
 }
 
 /* 0001464c 00014884 */ SInt32 snd_RegisterMIDI(/* 0x0(sp) */ MIDIBlockHeaderPtr midi) {
     /* -0x18(sp) */ MultiMIDIBlockHeaderPtr mmid;
     /* -0x14(sp) */ MIDIBlockHeaderPtr hold;
     /* -0x10(sp) */ SInt32 x;
+
+    if (midi->DataID == MID_ID) {
+        midi->BankPtr = snd_FindBankByID(midi->BankID);
+        if (midi->BankPtr == NULL) {
+            snd_ShowError(91, midi->BankID, 0, 0, 0);
+        }
+        midi->DataStart = midi->DataStart + (UInt32)midi;
+        midi->NextMIDIBlock = NULL;
+        midi->MultiMIDIParent = NULL;
+        snd_InsertMIDIBlockInList(midi);
+    } else if (midi->DataID == MMID_ID) {
+        mmid = midi;
+        mmid->NextMIDIBlock = NULL;
+        if (mmid->Version < 2) {
+            return 0;
+        }
+        snd_InsertMIDIBlockInList(mmid);
+        for (x = 0; x < mmid->NumMIDIBlocks; x++) {
+            mmid->BlockPtr[x] += (UInt32)midi;
+            hold = mmid->BlockPtr[x];
+            snd_RegisterMIDI(hold);
+            hold->MultiMIDIParent = mmid;
+        }
+    }
+
+    return 1;
 }
 
 /* 00014884 00014a60 */ void snd_UnregisterMIDI(/* 0x0(sp) */ MIDIBlockHeaderPtr midi) {
@@ -529,21 +1089,73 @@
     /* -0x14(sp) */ MIDIBlockHeaderPtr hold;
     /* -0x10(sp) */ SInt32 x;
     /* -0xc(sp) */ MIDIBlockHeaderPtr walk;
-    /* data 1394 */ static SInt32 working_mmd;
+    /* data 1394 */ static SInt32 working_mmd = 0;
+    if (!working_mmd) {
+        snd_MIDIStreamGone(midi);
+    }
+
+    if (midi->DataID == MMID_ID) {
+        mmid = midi;
+        working_mmd = 1;
+        for (x = 0; x < mmid->NumMIDIBlocks; x++) {
+            snd_UnregisterMIDI(mmid->BlockPtr[x]);
+        }
+        working_mmd = 0;
+    }
+
+    if (gMIDIListHead == NULL) {
+        return;
+    }
+
+    if (gMIDIListHead == midi) {
+        gMIDIListHead = midi->NextMIDIBlock;
+    } else {
+        for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock)
+            ;
+        walk->NextMIDIBlock = midi->NextMIDIBlock;
+    }
 }
 
 /* 00014a60 00014b00 */ MIDIBlockHeaderPtr snd_FindMIDIBlock(/* 0x0(sp) */ UInt32 id) {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
+    for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock) {
+        if (walk->ID == id) {
+            break;
+        }
+    }
+
+    return walk;
 }
 
 /* 00014b00 00014ba8 */ void snd_InsertMIDIBlockInList(/* 0x0(sp) */ MIDIBlockHeaderPtr midi) {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
+    if (gMIDIListHead != NULL) {
+        for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock)
+            ;
+        walk->NextMIDIBlock = midi;
+    } else {
+        gMIDIListHead = midi;
+    }
 }
 
 /* 00014ba8 00014d78 */ void snd_MIDIStreamGone(/* 0x0(sp) */ MIDIBlockHeaderPtr midi) {
     /* -0x18(sp) */ SoundBankPtr bank;
     /* -0x14(sp) */ SInt32 x;
     /* -0x10(sp) */ MIDISoundPtr midisound;
+
+    for (bank = gBankListHead; bank != NULL; bank = bank->NextBank) {
+        for (x = 0; x < bank->NumSounds; x++) {
+            if (bank->FirstSound[x].Type == SND_TYPE_MIDI || bank->FirstSound[x].Type == SND_TYPE_AME) {
+                midisound = &bank->FirstSound[x];
+                if (midisound->MIDIBlock == midi) {
+                    snd_LockMasterTick(512);
+                    snd_StopAllHandlersForSound(midisound, 0, 0);
+                    snd_UnlockMasterTick();
+                    midisound->MIDIBlock = NULL;
+                }
+            }
+        }
+    }
 }
 
 /* 00014d78 00015014 */ void snd_SetCDSifReg(/* 0x0(sp) */ SInt32 reg8, /* 0x4(sp) */ SInt32 reg9) {

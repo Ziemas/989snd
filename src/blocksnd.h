@@ -3,6 +3,15 @@
 
 #include "types.h"
 
+enum GRAIN_TYPE {
+    GRAIN_TYPE_TONE = 1,
+};
+
+enum BLOCK_FLAG {
+    BLOCK_HAS_NAMES = 0x100,
+    BLOCK_HAS_USERDATA = 0x200,
+};
+
 UInt32 snd_PlaySFX(SFXBlock2Ptr block, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend);
 UInt32 snd_PlaySFXWithStruct(SFXBlock2Ptr block, SInt32 sound, SInt16 sfx_vol, SInt16 sfx_pan, SndPlayParamsPtr params);
 

@@ -18,4 +18,6 @@ void snd_SetVAGStreamVolPan(UInt32 handle, SInt32 vol, SInt32 pan);
 
 void snd_SetVagStreamPitchModifier(UInt32 handle, SInt16 mod);
 
+SInt32 snd_StreamSafeCdSync(SInt32 mode);
+
 #endif // STREAM_H_

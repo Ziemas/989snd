@@ -26,6 +26,7 @@ void snd_SetSoundPitchBend(UInt32 handle, SInt16 bend);
 void snd_SetSoundPitchModifier(UInt32 handle, SInt16 mod);
 
 void snd_StopSound(UInt32 handle);
+void snd_StopAllSoundsInBank(SoundBankPtr bank, SInt32 silence);
 
 SoundBankPtr snd_FindBankByName(char *name);
 SInt32 snd_FindSoundByName(SFXBlock2Ptr block, char *name, SFXBlock2Ptr *found_block);

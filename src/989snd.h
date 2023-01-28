@@ -3,8 +3,8 @@
 
 #include "types.h"
 
-
 extern SInt32 gThreadPriority_TICK;
+extern SInt32 gFileReadMutex;
 
 extern struct Extern989MonitorInfo *g989Monitor;
 
