@@ -54,6 +54,7 @@ void snd_MIDIStreamGone(MIDIBlockHeaderPtr midi);
 
 SInt32 snd_BankTransfer(SoundBankPtr bank, SInt8 *data, UInt32 data_size, SInt32 offset, SInt32 state, UInt32 spu_mem_loc, UInt32 spu_mem_size, SpuTransferCallbackProc callback);
 
+void snd_ClearTransSema();
 SInt32 snd_IsCurrentTransferComplete(bool wait);
 SInt32 snd_EndBankTransfer(SoundBankPtr bank);
 

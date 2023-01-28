@@ -8,6 +8,7 @@ extern UInt32 gMicsPerTick;
 extern bool gPrefs_ShowMissingSounds;
 extern bool gPrefs_Silent;
 
+SInt32 snd_SystemRunning();
 SInt32 snd_GetTickRate();
 SInt32 snd_InstallSoundTick();
 

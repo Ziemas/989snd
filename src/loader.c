@@ -1,16 +1,20 @@
 #include "loader.h"
 #include "989snd.h"
 #include "blocksnd.h"
+#include "init.h"
 #include "intr_code.h"
 #include "intrman.h"
 #include "ioman.h"
+#include "libsd.h"
 #include "midi.h"
 #include "playsnd.h"
 #include "sndhand.h"
 #include "sram.h"
+#include "stdio.h"
 #include "stick.h"
 #include "stream.h"
 #include "sysclib.h"
+#include "sysmem.h"
 #include "types.h"
 
 /* data 1344 */ bool gLimit2Meg = false;
@@ -542,7 +546,40 @@
     sector = sect_loc + offset / 2048;
     offset %= 2048;
 
-    if (size >= 2048 && offset == 0) {
+    if (size < 2048 || offset != 0) {
+        if (sector != gReadBufferHasSector) {
+            err = snd_StreamSafeCdRead(sector, 1, &gFileLoadBuffer);
+            if (err != 0 && !gPrefs_Silent) {
+                printf("Error Kicking Off Read!\n");
+            }
+            snd_StreamSafeCdSync(0);
+
+            if (!err || (err = snd_StreamSafeCdGetError()) != 0) {
+                gReadBufferHasSector = 0;
+                if (err == 0) {
+                    err = 48;
+                }
+                snd_SetCDSifReg(0, err);
+                gLastLoadError = err;
+                SignalSema(gFileReadMutex);
+                return 0;
+            }
+
+            gReadBufferHasSector = sector;
+        }
+
+        move_bytes = 2048 - offset % 2048;
+        if (size < move_bytes) {
+            move_bytes = size;
+        }
+        memcpy(buffer, &gFileLoadBuffer + offset % 2048, move_bytes);
+        bytes_needed = size - move_bytes;
+        if (bytes_needed == 0) {
+            snd_SetCDSifReg(0, 0);
+            SignalSema(gFileReadMutex);
+            return 1;
+        }
+        sector++;
     }
 
     // TODO annoying messy function
@@ -797,11 +834,132 @@
     /* -0x20(sp) */ SInt32 msg;
     /* -0x1c(sp) */ void *sram_loc;
     /* -0x18(sp) */ UInt32 sram_size;
-    /* -0x14(sp) */ SFXBlock2Ptr block;
+    /* -0x14(sp) */ SFXBlock2Ptr block = bank;
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
+    msg = 0;
 
-    // TODO annoying big
+    // BUG originally comparing address of function
+    if (!snd_SystemRunning()) {
+        snd_ShowError(24, 0, 0, 0, 0);
+        return -2;
+    }
+
+    if (gTransfering) {
+        snd_ShowError(25, 0, 0, 0, 0);
+        gLastLoadError = 260;
+        return -10;
+    }
+
+    if (bank->DataID == SBV2_ID) {
+        if (spu_mem_size != 0) {
+            if (spu_mem_size < bank->VagDataSize) {
+                snd_ShowError(105, spu_mem_size, bank->VagDataSize, 0, 0);
+            }
+            bank->VagDataSize = spu_mem_size;
+        }
+
+        if (spu_mem_loc != 0) {
+            bank->Flags &= ~4;
+            bank->VagsInSR = (void *)spu_mem_loc;
+        }
+
+        sram_size = bank->VagDataSize;
+        sram_loc = bank->VagsInSR;
+    } else {
+        if (spu_mem_size != 0) {
+            if (spu_mem_size < block->VagDataSize) {
+                snd_ShowError(105, spu_mem_size, block->VagDataSize, 0, 0);
+            }
+            block->SRAMAllocSize = spu_mem_size;
+        }
+
+        if (spu_mem_loc != 0) {
+            block->Flags &= ~4;
+            block->VagsInSR = (void *)spu_mem_loc;
+        }
+
+        sram_size = block->SRAMAllocSize;
+        sram_loc = block->VagsInSR;
+    }
+
+    if (state == 0) {
+        if ((bank->Flags & 4) == 0) {
+            dis = CpuSuspendIntr(&oldstat);
+            if (snd_SRAMMarkUsed((UInt32)sram_loc, sram_size) == 0) {
+                if (!dis) {
+                    CpuResumeIntr(oldstat);
+                }
+                snd_ShowError(27, sram_size, (UInt32)sram_loc, 0, 0);
+                gLastLoadError = 259;
+                return -11;
+            }
+
+            if (!dis) {
+                CpuResumeIntr(oldstat);
+            }
+        } else {
+            dis = CpuSuspendIntr(&oldstat);
+            sram_loc = (void *)snd_SRAMMalloc(sram_size);
+            if (!dis) {
+                CpuResumeIntr(oldstat);
+            }
+
+            if (sram_loc == 0) {
+                snd_ShowError(26, sram_size, 0, 0, 0);
+                gLastLoadError = 259;
+                return -11;
+            }
+
+            if (bank->DataID == SBV2_ID) {
+                bank->VagsInSR = sram_loc;
+            } else {
+                block->VagsInSR = sram_loc;
+            }
+        }
+
+        if ((bank->Flags & 1) == 0) {
+            if (bank->DataID == SBV2_ID) {
+                bank->FirstSound = (SoundPtr)((SInt8 *)bank->FirstSound + (UInt32)bank);
+                bank->FirstProg = (ProgPtr)((SInt8 *)bank->FirstProg + (UInt32)bank);
+                bank->FirstTone = (TonePtr)((SInt8 *)bank->FirstTone + (UInt32)bank);
+                bank->Flags |= 1u;
+            } else {
+                block->FirstSound = (SFX2Ptr)((SInt8 *)block->FirstSound + (UInt32)block);
+                block->FirstGrain = (SFXGrain2Ptr)((SInt8 *)block->FirstGrain + (UInt32)block);
+                block->Flags |= 1u;
+            }
+        }
+    }
+
+    gTransferDoneCallback = callback;
+
+    while (true) {
+        ch = snd_GetFreeSPUDMA();
+        if (ch != -1) {
+            break;
+        }
+
+        if (!msg) {
+            msg = 1;
+        }
+
+        while (ch < 1000) {
+            ch++;
+        }
+    }
+
+    gTransfering = ch + 1;
+    snd_ClearTransSema();
+    sceSdSetTransIntrHandler(ch, snd_TransCallback, NULL);
+    if (sceSdVoiceTrans(ch, 0, data, sram_loc + offset, data_size) < data_size) {
+        snd_FreeSPUDMA(gTransfering - 1);
+        gTransfering = 0;
+        gLastLoadError = 261;
+        return -12;
+    }
+
+    return 0;
 }
 
 /* 0001354c 000135a4 */ void snd_ClearTransSema() {
@@ -1163,6 +1321,55 @@
     /* -0x24(sp) */ SInt32 dis;
     /* -0x20(sp) */ SInt32 intr_state;
     /* -0x1c(sp) */ sceSifDmaData transData;
+    gStats.cd_busy = reg8;
+    gStats.cd_error = reg9;
+
+    if (gEEStatusAddr == 0) {
+        return;
+    }
+
+    transData.size = 16;
+    transData.attr = 0;
+
+    if (gStats.cd_busy) {
+        transData.src = &gStats;
+        transData.dest = gEEStatusAddr;
+        dis = CpuSuspendIntr(&intr_state);
+        did = sceSifSetDmaIntr(&transData, 1, snd_EEDMADone, &gEEDMADoneSema);
+        if (!dis) {
+            CpuResumeIntr(intr_state);
+        }
+
+        while (sceSifDmaStat(did) >= 0) {
+            WaitSema(gEEDMADoneSema);
+        }
+    }
+
+    transData.src = &gStats.cd_error;
+    transData.dest = gEEStatusAddr + 16;
+    dis = CpuSuspendIntr(&intr_state);
+    did = sceSifSetDmaIntr(&transData, 1, snd_EEDMADone, &gEEDMADoneSema);
+    if (!dis) {
+        CpuResumeIntr(intr_state);
+    }
+
+    while (sceSifDmaStat(did) >= 0) {
+        WaitSema(gEEDMADoneSema);
+    }
+
+    if (reg8 == 0) {
+        transData.src = &gStats;
+        transData.dest = gEEStatusAddr;
+        dis = CpuSuspendIntr(&intr_state);
+        did = sceSifSetDmaIntr(&transData, 1, snd_EEDMADone, &gEEDMADoneSema);
+        if (!dis) {
+            CpuResumeIntr(intr_state);
+        }
+
+        while (sceSifDmaStat(did) >= 0) {
+            WaitSema(gEEDMADoneSema);
+        }
+    }
 }
 
 /* 00015014 000152f8 */ void *snd_IOPMemAlloc(/* 0x0(sp) */ SInt32 size, /* 0x4(sp) */ SInt32 use, /* 0x8(sp) */ SInt32 *act_size) {
@@ -1171,17 +1378,113 @@
     /* -0x18(sp) */ SInt32 from_where;
     /* -0x14(sp) */ SInt32 dis;
     /* -0x10(sp) */ SInt32 oldstat;
+
+    dis = CpuSuspendIntr(&oldstat);
+    if (use == 8) {
+        max_avail = QueryMaxFreeMemSize();
+        if (gLimit2Meg != 0 && max_avail > 0x200000) {
+            if (!gPrefs_Silent) {
+                printf("989snd: detected more then 2 meg free (%d free).\n", max_avail);
+            }
+            max_avail -= 0x600000;
+            if (max_avail < 0) {
+                max_avail = 0;
+            }
+            if (!gPrefs_Silent) {
+                printf("        subtracting 6 meg (%d)\n", 0x600000);
+                printf("        max avail then is %d\n", max_avail);
+            }
+            if (!max_avail) {
+                max_avail = 10240;
+                if (!gPrefs_Silent) {
+                    printf("        allowing a 10k buffer!\n");
+                }
+            }
+        }
+
+        if ((max_avail & 0xf) != 0) {
+            max_avail = 16 * (max_avail / 16);
+        }
+        if (max_avail < size) {
+            size = max_avail;
+        }
+        if (size == 0) {
+            if (!dis) {
+                CpuResumeIntr(oldstat);
+            }
+            return NULL;
+        }
+    }
+
+    // TODO simplify, compiler simplified switch case?
+    if ((use == 7 || use < 8) && use < 6 && use >= 1) {
+        mem = AllocSysMemory(ALLOC_LAST, size, 0);
+    } else {
+        mem = AllocSysMemory(ALLOC_FIRST, size, 0);
+    }
+
+    if (mem != NULL && act_size != NULL) {
+        *act_size = size;
+    }
+
+    if (!dis) {
+        CpuResumeIntr(oldstat);
+    }
+
+    return mem;
 }
 
 /* 000152f8 00015360 */ void snd_IOPMemFree(/* 0x0(sp) */ void *mem) {
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
+    dis = CpuSuspendIntr(&oldstat);
+    FreeSysMemory(mem);
+    if (!dis) {
+        CpuResumeIntr(oldstat);
+    }
 }
 
 /* 00015360 00015478 */ SInt32 snd_GetFreeSPUDMA() {
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
+    dis = CpuSuspendIntr(&intr_state);
+    if (!gDMAInUse[0]) {
+        gDMAInUse[0] = 1;
+        if (!dis) {
+            CpuResumeIntr(intr_state);
+        }
+        sceSdSetTransIntrHandler(0, NULL, NULL);
+        return 0;
+    }
+
+    if (!gDMAInUse[1]) {
+        gDMAInUse[1] = 1;
+        if (!dis) {
+            CpuResumeIntr(intr_state);
+        }
+        sceSdSetTransIntrHandler(1, NULL, NULL);
+        return 1;
+    }
+
+    if (!dis) {
+        CpuResumeIntr(intr_state);
+    }
+
+    return -1;
 }
 
-/* 00015478 000154e8 */ void snd_FreeSPUDMA(/* 0x0(sp) */ SInt32 ch) {}
-/* 000154e8 0001556c */ void snd_WaitDMADone() {}
+/* 00015478 000154e8 */ void snd_FreeSPUDMA(/* 0x0(sp) */ SInt32 ch) {
+    gDMAInUse[ch] = 0;
+    if (VAGStreamDMAList != NULL) {
+        SignalSema(gStartDMASema);
+    }
+}
+
+/* 000154e8 0001556c */ void snd_WaitDMADone() {
+    while (gDMAInUse[0] || gDMAInUse[1]) {
+        gWaitingDMAComplete = GetThreadId();
+        SleepThread();
+    }
+
+    gWaitingDMAComplete = 0;
+}
