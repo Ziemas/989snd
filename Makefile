@@ -16,7 +16,7 @@ IOP_OBJS = src/989snd.o src/ame.o src/autopan.o src/autopb.o src/autoptch.o \
 
 IOP_LIBS =
 IOP_TABS = stdio.tab libsd.tab ioman.tab thbase.tab sysmem.tab sysclib.tab \
-			sifcmd.tab sifman.tab intrman.tab thsemap.tab cdvdman.tab
+			sifcmd.tab sifman.tab intrman.tab thsemap.tab cdvdman.tab timrman.tab
 
 IOP_CFLAGS += -Wall -fno-common -Werror-implicit-function-declaration -std=c99 -O3
 
