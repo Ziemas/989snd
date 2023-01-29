@@ -1173,13 +1173,13 @@
     for (bank = gBankListHead; bank != NULL; bank = bank->NextBank) {
         for (x = 0; x < bank->NumSounds; x++) {
             bank->FirstSound[x].Bank = bank;
-        }
 
-        if (bank->FirstSound[x].Type == SND_TYPE_MIDI || bank->FirstSound[x].Type == SND_TYPE_AME) {
-            midisound = &bank->FirstSound[x];
-            midisound->MIDIBlock = snd_FindMIDIBlock(midisound->MIDIID);
-            if (midisound->MIDIBlock == NULL) {
-                snd_ShowError(90, midisound->MIDIID, 0, 0, 0);
+            if (bank->FirstSound[x].Type == SND_TYPE_MIDI || bank->FirstSound[x].Type == SND_TYPE_AME) {
+                midisound = &bank->FirstSound[x];
+                midisound->MIDIBlock = snd_FindMIDIBlock(midisound->MIDIID);
+                if (midisound->MIDIBlock == NULL) {
+                    snd_ShowError(90, midisound->MIDIID, 0, 0, 0);
+                }
             }
         }
 

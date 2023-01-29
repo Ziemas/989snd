@@ -1,11 +1,13 @@
 #include "midi.h"
 #include "989snd.h"
+#include "ame.h"
 #include "init.h"
 #include "intrman.h"
 #include "libsd-common.h"
 #include "loader.h"
 #include "playsnd.h"
 #include "sndhand.h"
+#include "stdio.h"
 #include "types.h"
 #include "valloc.h"
 #include "vol.h"
@@ -122,64 +124,102 @@
             stream->RunningStatus = *stream->PlayPos++;
         }
 
-        switch (stream->RunningStatus & 0xF0) {
-        case 0x80:
-            snd_MIDINoteOff(stream);
-            stream->PlayPos += 2;
-            break;
-        case 0x90:
-            if (stream->PlayPos[1] != 0) {
-                if ((stream->MuteState & (1 << (stream->RunningStatus & 0xF))) == 0) {
-                    snd_MIDINoteOn(stream);
-                }
-            } else {
-                snd_MIDINoteOff(stream);
-            }
-            stream->PlayPos += 2;
-            break;
-        case 0xB0:
-            switch (*stream->PlayPos) {
-            case 0:
-                bank = snd_FindBankByNum(stream->PlayPos[1]);
-                if (bank != NULL) {
-                    stream->BankPtr = bank;
+        if (stream->RunningStatus == 0xFF) {
+            if (*stream->PlayPos == 0x2f) {
+                stream->Repeats--;
+                if (stream->Repeats != 0) {
+                    stream->PlayPos = stream->DataStart;
+                    if (stream->Repeats < 0) {
+                        stream->Repeats = 0;
+                    }
                 } else {
                     stream_done = 1;
-                    snd_ShowError(104, stream->PlayPos[1], 0, 0, 0);
                 }
-                break;
-            case 0x7:
-                stream->Vol[stream->RunningStatus & 0xf] = stream->PlayPos[1];
-                break;
-            case 0xA:
-                stream->Pan[stream->RunningStatus & 0xf] = snd_MIDITo360Pan(stream->PlayPos[1]);
-                break;
-            case 0x40:
-                if (stream->PlayPos[1] < 64) {
-                    snd_ReleaseDamper(stream);
+            } else if (*stream->PlayPos == 0x51) {
+                stream->PlayPos += 2;
+                stream->Tempo = (stream->PlayPos[0] << 16) | (stream->PlayPos[1] << 8) | stream->PlayPos[2];
+                stream->PPT = 1000 * gMicsPerTick / (stream->Tempo / (stream->PPQ / 10));
+                stream->PlayPos += 3;
+            } else {
+                snd_ShowError(96, *stream->PlayPos, 0, 0, 0);
+                stream_done = 1;
+            }
+        } else if (stream->RunningStatus == 0xf0) {
+            if (*stream->PlayPos == 0x75) {
+                stream->PlayPos++;
+                stream->PlayPos = snd_AMEFunction(stream, stream->PlayPos);
+                if (stream->PlayPos) {
+                    stream->PlayPos++;
                 } else {
-                    stream->DamperState |= 1 << (stream->RunningStatus & 0xf);
+                    stream_done = 1;
                 }
+            } else {
+                while (*(UInt8 *)stream->PlayPos != 0xf7) {
+                    stream->PlayPos++;
+                }
+                stream->PlayPos++;
+                snd_ShowError(97, 0, 0, 0, 0);
+            }
+        } else {
+            switch (stream->RunningStatus & 0xF0) {
+            case 0x80:
+                snd_MIDINoteOff(stream);
+                stream->PlayPos += 2;
+                break;
+            case 0x90:
+                if (stream->PlayPos[1] != 0) {
+                    if ((stream->MuteState & (1 << (stream->RunningStatus & 0xF))) == 0) {
+                        snd_MIDINoteOn(stream);
+                    }
+                } else {
+                    snd_MIDINoteOff(stream);
+                }
+                stream->PlayPos += 2;
+                break;
+            case 0xB0:
+                switch (*stream->PlayPos) {
+                case 0:
+                    bank = snd_FindBankByNum(stream->PlayPos[1]);
+                    if (bank != NULL) {
+                        stream->BankPtr = bank;
+                    } else {
+                        stream_done = 1;
+                        snd_ShowError(104, stream->PlayPos[1], 0, 0, 0);
+                    }
+                    break;
+                case 0x7:
+                    stream->Vol[stream->RunningStatus & 0xf] = stream->PlayPos[1];
+                    break;
+                case 0xA:
+                    stream->Pan[stream->RunningStatus & 0xf] = snd_MIDITo360Pan(stream->PlayPos[1]);
+                    break;
+                case 0x40:
+                    if (stream->PlayPos[1] < 64) {
+                        snd_ReleaseDamper(stream);
+                    } else {
+                        stream->DamperState |= 1 << (stream->RunningStatus & 0xf);
+                    }
+                    break;
+                }
+                stream->PlayPos += 2;
+                break;
+            case 0xC0:
+                stream->Prog[stream->RunningStatus & 0xf] = stream->PlayPos[0];
+                stream->PlayPos += 1;
+                break;
+            case 0xD0:
+                snd_MIDINoteOff(stream);
+                stream->PlayPos += 1;
+                break;
+            case 0xE0:
+                snd_PitchBend(stream);
+                stream->PlayPos += 2;
+                break;
+            default:
+                snd_ShowError(98, stream->RunningStatus & 0xF0, 0, 0, 0);
+                stream_done = 1;
                 break;
             }
-            stream->PlayPos += 2;
-            break;
-        case 0xC0:
-            stream->Prog[stream->RunningStatus & 0xf] = stream->PlayPos[0];
-            stream->PlayPos += 1;
-            break;
-        case 0xD0:
-            snd_MIDINoteOff(stream);
-            stream->PlayPos += 1;
-            break;
-        case 0xE0:
-            snd_PitchBend(stream);
-            stream->PlayPos += 2;
-            break;
-        default:
-            snd_ShowError(98, stream->RunningStatus & 0xF0, 0, 0, 0);
-            stream_done = 1;
-            break;
         }
 
         if (!stream_done) {

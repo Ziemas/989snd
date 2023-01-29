@@ -72,7 +72,7 @@
 /* 00004b44 00004c44 */ void snd_HandleLFOs() {
     /* -0x10(sp) */ struct LFOTracker *tracker;
     /* -0xc(sp) */ UInt32 flags;
-    UNIMPLEMENTED();
+    //UNIMPLEMENTED();
 }
 
 /* 00004c44 00004dc8 */ void snd_CalcLFODepth(/* 0x0(sp) */ struct LFOTracker *lfo) {

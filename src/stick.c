@@ -70,6 +70,7 @@
         return 0;
     }
 
+    gTickAttentionNeeded++;
     for (walk = gPlayingListHead; walk != NULL; walk = walk->playlist) {
         core = walk->voice / NUM_VOICE_PER_CORE;
         c_v = walk->voice % NUM_VOICE_PER_CORE;

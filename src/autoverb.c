@@ -15,5 +15,5 @@
 /* 0000825c 00008738 */ void snd_AutoVerbHandler() {
     /* -0x10(sp) */ SInt32 core;
     /* -0xc(sp) */ SInt32 newdepth;
-    UNIMPLEMENTED();
+    //UNIMPLEMENTED();
 }

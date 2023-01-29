@@ -143,6 +143,10 @@
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
     dis = CpuSuspendIntr(&intr_state);
+    snd->prev = NULL;
+    snd->next = NULL;
+    snd->OwnerID |= 0x80000000;
+
     if (gActiveSoundListTail != NULL) {
         if (gActiveSoundListTail != snd) {
             gActiveSoundListTail->next = snd;
