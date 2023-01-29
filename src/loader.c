@@ -546,6 +546,7 @@
     sector = sect_loc + offset / 2048;
     offset %= 2048;
 
+    // start not sector aligned
     if (size < 2048 || offset != 0) {
         if (sector != gReadBufferHasSector) {
             err = snd_StreamSafeCdRead(sector, 1, &gFileLoadBuffer);
@@ -582,9 +583,52 @@
         sector++;
     }
 
-    // TODO annoying messy function
+    // read whole sectors aligned
+    get_whole_sectors = bytes_needed / 2048;
+    if (get_whole_sectors != 0) {
+        err = snd_StreamSafeCdRead(sector, get_whole_sectors, &buffer[move_bytes]);
+        snd_StreamSafeCdSync(0);
 
-    return 0;
+        if (!err || (err = snd_StreamSafeCdGetError()) != 0) {
+            gReadBufferHasSector = 0;
+            if (err == 0) {
+                err = 48;
+            }
+            snd_SetCDSifReg(0, err);
+            gLastLoadError = err;
+            SignalSema(gFileReadMutex);
+            return 0;
+        }
+    }
+
+    // read remainder
+    sector += get_whole_sectors;
+    bytes_needed %= 2048;
+    if (bytes_needed != 0) {
+        if (sector != gReadBufferHasSector) {
+            err = snd_StreamSafeCdRead(sector, 1, &gFileLoadBuffer);
+            snd_StreamSafeCdSync(0);
+
+            if (!err || (err = snd_StreamSafeCdGetError()) != 0) {
+                gReadBufferHasSector = 0;
+                if (err == 0) {
+                    err = 48;
+                }
+                snd_SetCDSifReg(0, err);
+                gLastLoadError = err;
+                SignalSema(gFileReadMutex);
+                return 0;
+            }
+
+            gReadBufferHasSector = 0;
+        }
+
+        memcpy(&buffer[size - bytes_needed], &gFileLoadBuffer, bytes_needed);
+    }
+
+    snd_SetCDSifReg(0, 0);
+    SignalSema(gFileReadMutex);
+    return 1;
 }
 
 /* 000122a0 00012394 */ SoundBankPtr snd_BankLoadByLocEx(/* 0x0(sp) */ SInt32 sect_loc, /* 0x4(sp) */ SInt32 file_offset, /* 0x8(sp) */ UInt32 spu_mem_loc, /* 0xc(sp) */ UInt32 spu_mem_size) {
