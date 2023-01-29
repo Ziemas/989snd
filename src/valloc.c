@@ -299,7 +299,7 @@
     dis = CpuSuspendIntr(&intr_state);
     voll = snd_AdjustVolToGroup(gChannelStatus[voice].Volume.left, gChannelStatus[voice].VolGroup);
     sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(core, c_v), voll >> 1);
-    volr = snd_AdjustVolToGroup(gChannelStatus[voice].Volume.left, gChannelStatus[voice].VolGroup);
+    volr = snd_AdjustVolToGroup(gChannelStatus[voice].Volume.right, gChannelStatus[voice].VolGroup);
     sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(core, c_v), volr >> 1);
 
     if ((gChannelStatus[voice].Tone->Flags & TONE_REVERB_ONLY) != 0) {
