@@ -15,6 +15,7 @@ void snd_SRAMRemoveNode(sSRAMNodePtr node);
 void snd_SRAMAddNode(sSRAMNodePtr node);
 
 SInt32 snd_SRAMGetFreeMem();
+SInt32 snd_SRAMMaxFreeBlockSize();
 UInt32 snd_SRAMMarkUsed(UInt32 loc, UInt32 size);
 
 #endif // SRAM_H_

@@ -54,6 +54,10 @@ EffectChainPtr snd_FindEffect(GSoundHandlerPtr handler, SInt32 type_flag);
 
 void snd_RemoveEffectFromHandler(GSoundHandlerPtr handler, EffectChainPtr effect);
 void snd_PauseHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child);
+void snd_PauseAllSoundsInGroup(UInt32 groups);
 void snd_ContinueHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child);
+void snd_ContinueAllSoundsInGroup(UInt32 groups);
+void snd_StopAllSoundsInGroup(UInt32 groups);
+void snd_StopAllSounds();
 
 #endif // SNDHAND_H_

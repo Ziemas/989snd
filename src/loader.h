@@ -3,8 +3,11 @@
 
 #include "types.h"
 
-extern SFXBlock2Ptr gBlockListHead;
 extern bool gLimit2Meg;
+extern ExternSndIOPAlloc gAllocProc;
+extern ExternSndIOPFree gFreeProc;
+extern SFXBlock2Ptr gBlockListHead;
+extern char *gEEStatusAddr;
 
 enum BANK_FLAGS {
     BFLAG_XREF_RESOLVED = 2,
@@ -17,6 +20,8 @@ enum DATA_ID {
 
 void snd_InitLoader();
 void snd_ShutdownLoader();
+
+SInt32 snd_GetLastLoadError();
 
 void *snd_IOPMemAlloc(SInt32 size, SInt32 use, SInt32 *act_size);
 void snd_IOPMemFree(void *mem);
@@ -34,6 +39,7 @@ MultiMIDIBlockHeaderPtr snd_MMDLoadFromDataSource();
 MultiMIDIBlockHeaderPtr snd_MMDLoadByLoc(SInt32 sect_loc, SInt32 file_offset);
 
 bool snd_BankLoaded(SoundBankPtr bank);
+void snd_UnloadBank(SoundBankPtr bank);
 void snd_UnloadBlock(SFXBlock2Ptr block);
 bool snd_BlockLoaded(SFXBlock2Ptr block);
 
@@ -43,6 +49,8 @@ SFXBlock2Ptr snd_FindBlockByID(UInt32 id);
 SFXBlock2Ptr snd_FindBlockByNum(SInt8 num);
 
 void snd_UnloadAllBanks();
+void snd_ResolveBankXREFS();
+
 void snd_UnloadMMD(MultiMIDIBlockHeaderPtr mmd);
 void snd_UnloadAllMMD();
 

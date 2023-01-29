@@ -1,3 +1,4 @@
+#include "autovol.h"
 #include "types.h"
 
 /* 00008738 00008c00 */ void snd_AutoVol(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 vol, /* 0x8(sp) */ SInt32 delta_time, /* 0xc(sp) */ SInt32 delta_from) {

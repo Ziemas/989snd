@@ -230,7 +230,7 @@
 }
 
 /* 00028d20 00028dac */ SInt32 snd_StreamSafeCdBreak() {}
-/* 00028dac 00028f9c */ SInt32 snd_StreamSafeCdSearchFile(/* 0x0(sp) */ struct sceCdlFILE *fp, /* 0x4(sp) */ char *name) {
+/* 00028dac 00028f9c */ SInt32 snd_StreamSafeCdSearchFile(/* 0x0(sp) */ sceCdlFILE *fp, /* 0x4(sp) */ char *name) {
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 intr_state;
 }

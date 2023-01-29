@@ -9,6 +9,8 @@ extern SInt32 gEEDMADoneSema;
 
 extern struct Extern989MonitorInfo *g989Monitor;
 
+Extern989HandlerPtr snd_FindExternProcHandler(UInt32 id);
+
 void snd_EEDMADone(SInt32 *sema_id_ptr);
 
 void snd_ParseCommandLineArg(char *arg);

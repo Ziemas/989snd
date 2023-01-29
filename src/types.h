@@ -845,7 +845,7 @@ struct IOPVagStreamMonitor { // 0x40
     /* 0x10 */ char pad[48];
 };
 
-typedef SInt32 (*Extern989Proc)(/* parameters unknown */);
+typedef SInt32 (*Extern989Proc)(SInt32 arg1, SInt32 arg2, SInt32 arg3, SInt32 arg4, SInt32 arg5);
 
 struct Extern989Handler { // 0x14
     /* 0x00 */ UInt32 proc_id;

@@ -25,6 +25,9 @@ void snd_SetSFXPitchbend(UInt32 handle, SInt16 bend);
 void snd_SetSFXVolPan(UInt32 handle, SInt32 vol, SInt32 pan, SInt32 cause);
 
 void snd_SetSFXPitchModifier(UInt32 handle, SInt16 mod);
+
+SInt8 snd_GetSFXGlobalReg(SInt32 which);
+void snd_SetSFXGlobalReg(SInt32 which, SInt8 val);
 SInt8 snd_GetSFXSoundReg(UInt32 handle, SInt32 which);
 void snd_SetSFXSoundReg(UInt32 handle, SInt32 which, SInt8 val);
 void snd_SetAllSFXSoundReg(UInt32 handle, SInt8 *vals);

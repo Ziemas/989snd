@@ -1,3 +1,4 @@
+#include "autoptch.h"
 #include "types.h"
 
 /* 000076c8 00007ab0 */ void snd_AutoPitch(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 pitch, /* 0x8(sp) */ SInt32 delta_time, /* 0xc(sp) */ SInt32 delta_from) {

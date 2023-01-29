@@ -25,8 +25,14 @@ enum {
 void snd_InitVoiceAllocator();
 void snd_CleanupVoiceAllocator();
 
+void snd_SetMixerMode(SInt32 channel_mode, SInt32 reverb_mode);
+void snd_SetGroupVoiceRange(SInt32 group, SInt32 min, SInt32 max);
+
 SInt32 snd_LockVoiceAllocatorEx(bool block, UInt32 ownerID);
 void snd_UnlockVoiceAllocator();
+
+SInt32 snd_ExternVoiceAlloc(SInt32 vol_group, SInt32 priority);
+void snd_ExternVoiceFree(SInt32 voice);
 
 SInt32 snd_AllocateVoice(SInt32 vol_group, SInt32 priority);
 void snd_StartVAGVoice(SInt32 voice, bool noise);
@@ -38,6 +44,7 @@ void snd_PauseVoicesOwnedWithOwner(GSoundHandlerPtr owner);
 void snd_UnPauseVoicesOwnedWithOwner(GSoundHandlerPtr owner);
 
 void snd_VoiceIsDone(SInt32 voice);
+SInt32 snd_GetVoiceStatus(SInt32 voice);
 
 void snd_MarkVoicePlaying(SInt32 voice);
 void snd_MarkVoiceFree(SInt32 voice);
