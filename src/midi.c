@@ -107,7 +107,7 @@
     in_function = 1;
 
     if ((stream->Flags & 1) != 0) {
-        stream->PPT = 1000 * gMicsPerTick / (stream->Tempo / (stream->PPQ / 10));
+        stream->PPT = 100 * gMicsPerTick / (stream->Tempo / stream->PPQ);
         stream->RunningStatus = 0;
         stream->TickDelta = 100 * ReadVarLen(stream->PlayPos, &used_bytes);
         stream->TickCountdown = (stream->TickDelta / 100 * stream->Tempo / stream->PPQ - 1 + gMicsPerTick) / gMicsPerTick;
@@ -138,7 +138,7 @@
             } else if (*stream->PlayPos == 0x51) {
                 stream->PlayPos += 2;
                 stream->Tempo = (stream->PlayPos[0] << 16) | (stream->PlayPos[1] << 8) | stream->PlayPos[2];
-                stream->PPT = 1000 * gMicsPerTick / (stream->Tempo / (stream->PPQ / 10));
+                stream->PPT = 100 * gMicsPerTick / (stream->Tempo / stream->PPQ);
                 stream->PlayPos += 3;
             } else {
                 snd_ShowError(96, *stream->PlayPos, 0, 0, 0);
