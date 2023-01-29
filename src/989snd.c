@@ -867,10 +867,9 @@
 }
 
 /* 00003120 000031c8 */ static void *snd_EEMessageParser(/* 0x0(sp) */ UInt32 command, /* 0x4(sp) */ void *data, /* 0x8(sp) */ SInt32 size) {
-    gWriteBackdataOffset = snd_MESSAGE_RETURN_BUFFER + 4;
+    gWriteBackdataOffset = &snd_MESSAGE_RETURN_BUFFER[1];
     gCommandFunc[command](data);
-    *(SInt32 *)(gWriteBackdataOffset + 4) = -1;
-
+    gWriteBackdataOffset[1] = -1;
     return snd_MESSAGE_RETURN_BUFFER;
 }
 
@@ -881,7 +880,7 @@
     *(SInt32 *)snd_MESSAGE_RECIEVE_BUFFER = -1;
     sceSifInitRpc(0);
     sceSifSetRpcQueue(&qd, GetThreadId());
-    sceSifRegisterRpc(&sd, 0x123456, snd_EEMessageParser, &snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRegisterRpc(&sd, 0x123456, snd_EEMessageParser, snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
     sceSifRpcLoop(&qd);
 
     return 0;
@@ -924,7 +923,7 @@
 
     sceSifInitRpc(0);
     sceSifSetRpcQueue(&qd, GetThreadId());
-    sceSifRegisterRpc(&sd, 0x123457, snd_EELoaderMessageParser, &snd_LOADER_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRegisterRpc(&sd, 0x123457, snd_EELoaderMessageParser, snd_LOADER_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
     sceSifRpcLoop(&qd);
 
     return 0;
