@@ -473,10 +473,10 @@
                 return NULL;
             }
 
-            if (block != 0) {
-                result = snd_BankTransfer(bank_head, bank_body, max_length, sram_offset, 1, spu_mem_loc, spu_mem_size, NULL);
-            } else {
+            if (block == 0) {
                 result = snd_BankTransfer(bank_head, bank_body, max_length, 0, 0, spu_mem_loc, spu_mem_size, NULL);
+            } else {
+                result = snd_BankTransfer(bank_head, bank_body, max_length, sram_offset, 1, spu_mem_loc, spu_mem_size, NULL);
             }
 
             if (result < 0) {

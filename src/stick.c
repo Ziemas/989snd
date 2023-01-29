@@ -27,6 +27,7 @@
     gMasterTickOwnerLast = ownerID;
     gLockMasterTick++;
 }
+
 /* 00021b48 00021c38 */ void snd_UnlockMasterTick() {
     if (gLockMasterTick != 0) {
         gLockMasterTick--;

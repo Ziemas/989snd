@@ -1,4 +1,5 @@
 #include "types.h"
+#include "util.h"
 
 /* bss 110 */ struct BasicEffect gVerbFX[2][2];
 
@@ -7,10 +8,12 @@
     /* -0x18(sp) */ SInt32 depthchange;
     /* -0x14(sp) */ SInt16 original_depth;
     /* -0x10(sp) */ SInt32 effect_index;
+    UNIMPLEMENTED();
 }
 
 /* 000081e8 0000825c */ void snd_KillAutoVerbForCore(/* 0x0(sp) */ SInt32 core) {}
 /* 0000825c 00008738 */ void snd_AutoVerbHandler() {
     /* -0x10(sp) */ SInt32 core;
     /* -0xc(sp) */ SInt32 newdepth;
+    UNIMPLEMENTED();
 }

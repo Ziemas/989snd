@@ -1,9 +1,11 @@
 #include "types.h"
+#include "util.h"
 
 /* 00004dc8 0000500c */ UInt32 snd_PlayAMESound(/* 0x0(sp) */ MIDISoundPtr sound, /* 0x4(sp) */ SInt32 vol, /* 0x8(sp) */ SInt32 pan, /* -0x18(sp) */ SInt16 pitch_mod, /* 0x10(sp) */ int bend) {
     /* -0x16(sp) */ SInt16 bend_;
     /* -0x14(sp) */ AMEHandlerPtr stream_handler;
     /* -0x10(sp) */ MultiMIDIBlockHeaderPtr ame_master;
+    UNIMPLEMENTED();
 }
 
 /* 0000500c 00005298 */ SInt32 snd_StartAMESegment(/* 0x0(sp) */ AMEHandlerPtr parent, /* 0x4(sp) */ SInt32 segment) {
@@ -11,21 +13,25 @@
     /* -0x14(sp) */ AMEStreamHeaderPtr stream_ptr;
     /* -0x10(sp) */ MultiMIDIBlockHeaderPtr ame_master;
     /* -0xc(sp) */ MIDISoundPtr m_sound;
+    UNIMPLEMENTED();
 }
 
 /* 00005298 00005320 */ void snd_StopAMESegment(/* 0x0(sp) */ MIDIHandlerPtr handler) {}
 /* 00005320 00005394 */ AMEStreamHeaderPtr snd_FindAMEStream(/* 0x0(sp) */ MIDIHandlerPtr stream1, /* 0x4(sp) */ SInt32 index) {
     /* -0x10(sp) */ MultiMIDIBlockHeaderPtr ame_master;
+    UNIMPLEMENTED();
 }
 
 /* 00005394 0000555c */ void snd_SetAMESoundVolumePan(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 vol, /* 0x8(sp) */ SInt32 pan) {
     /* -0x10(sp) */ AMEHandlerPtr stream;
     /* -0xc(sp) */ MIDIHandlerPtr walk;
+    UNIMPLEMENTED();
 }
 
 /* 0000555c 00005640 */ void snd_SetAMESoundPitchModifier(/* 0x0(sp) */ UInt32 handle, /* -0x18(sp) */ SInt16 mod) {
     /* -0x14(sp) */ AMEHandlerPtr stream;
     /* -0x10(sp) */ MIDIHandlerPtr walk;
+    UNIMPLEMENTED();
 }
 
 /* 00005640 00006600 */ SInt8 *snd_AMEFunction(/* 0x0(sp) */ MIDIHandlerPtr stream, /* 0x4(sp) */ UInt8 *ame_header) {
@@ -41,17 +47,21 @@
     /* -0x14(sp) */ SInt32 stop;
     /* -0x10(sp) */ SInt8 *stream_end;
     /* -0xc(sp) */ AMEHandlerPtr ame_handler;
+    UNIMPLEMENTED();
 }
 
 /* 00006600 00006744 */ void snd_SetMIDIRegister(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 reg, /* -0x10(sp) */ SInt16 value) {
     /* -0xc(sp) */ AMEHandlerPtr ame;
+    UNIMPLEMENTED();
 }
 
 /* 00006744 00006844 */ void snd_SetAllMIDIRegister(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt8 *vals) {
     /* -0x10(sp) */ AMEHandlerPtr ame;
     /* -0xc(sp) */ SInt32 i;
+    UNIMPLEMENTED();
 }
 
 /* 00006844 000068f0 */ SInt32 snd_GetMIDIRegister(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 reg) {
     /* -0x10(sp) */ AMEHandlerPtr ame;
+    UNIMPLEMENTED();
 }
