@@ -446,7 +446,7 @@
     }
 
     snd_SeekDataSource(fa->where[0].offset, 0);
-    if ((snd_ReadBytes(bank_head_ram, fa->where[0].size)) != fa->where[0].size) {
+    if ((snd_ReadBytes(bank_head, fa->where[0].size)) != fa->where[0].size) {
         gReadBufferHasSector = 0;
         snd_ShowError(17, gLastLoadError, 0, 0, 0);
         gFreeProc(bank_head_ram);
@@ -875,13 +875,12 @@
 /* 00012ed4 0001354c */ SInt32 snd_BankTransfer(/* 0x0(sp) */ SoundBankPtr bank, /* 0x4(sp) */ SInt8 *data, /* 0x8(sp) */ UInt32 data_size, /* 0xc(sp) */ SInt32 offset, /* 0x10(sp) */ SInt32 state, /* 0x14(sp) */ UInt32 spu_mem_loc, /* 0x18(sp) */ UInt32 spu_mem_size, /* 0x1c(sp) */ SpuTransferCallbackProc callback) {
     /* -0x28(sp) */ UInt32 size;
     /* -0x24(sp) */ SInt32 ch;
-    /* -0x20(sp) */ SInt32 msg;
+    /* -0x20(sp) */ SInt32 msg = 0;
     /* -0x1c(sp) */ void *sram_loc;
     /* -0x18(sp) */ UInt32 sram_size;
     /* -0x14(sp) */ SFXBlock2Ptr block = bank;
     /* -0x10(sp) */ SInt32 dis;
     /* -0xc(sp) */ SInt32 oldstat;
-    msg = 0;
 
     // BUG originally comparing address of function
     if (!snd_SystemRunning()) {
@@ -928,21 +927,7 @@
     }
 
     if (state == 0) {
-        if ((bank->Flags & 4) == 0) {
-            dis = CpuSuspendIntr(&oldstat);
-            if (snd_SRAMMarkUsed((UInt32)sram_loc, sram_size) == 0) {
-                if (!dis) {
-                    CpuResumeIntr(oldstat);
-                }
-                snd_ShowError(27, sram_size, (UInt32)sram_loc, 0, 0);
-                gLastLoadError = 259;
-                return -11;
-            }
-
-            if (!dis) {
-                CpuResumeIntr(oldstat);
-            }
-        } else {
+        if ((bank->Flags & 4) != 0) {
             dis = CpuSuspendIntr(&oldstat);
             sram_loc = (void *)snd_SRAMMalloc(sram_size);
             if (!dis) {
@@ -959,6 +944,20 @@
                 bank->VagsInSR = sram_loc;
             } else {
                 block->VagsInSR = sram_loc;
+            }
+        } else {
+            dis = CpuSuspendIntr(&oldstat);
+            if (snd_SRAMMarkUsed((UInt32)sram_loc, sram_size) == 0) {
+                if (!dis) {
+                    CpuResumeIntr(oldstat);
+                }
+                snd_ShowError(27, sram_size, (UInt32)sram_loc, 0, 0);
+                gLastLoadError = 259;
+                return -11;
+            }
+
+            if (!dis) {
+                CpuResumeIntr(oldstat);
             }
         }
 

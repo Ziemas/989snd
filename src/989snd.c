@@ -41,6 +41,7 @@
 /* data 34 */ UInt32 *gWriteBackdataOffset = NULL;
 /* data 38 */ Extern989HandlerPtr gExternHandlersList = NULL;
 /* data 3c */ CommandHandler gCommandFunc[] = {
+    snd_CMD_SL_INIT,
     snd_CMD_SL_CLOSE,
     snd_CMD_SL_LOADBANK,
     snd_CMD_SL_LOADBANKBYLOC,
@@ -939,7 +940,7 @@
     /* -0x14(sp) */ int i;
     /* -0x10(sp) */ char *walk;
 
-    for (x = 0; x < argc; x++) {
+    for (x = 1; x < argc; x++) {
         snd_ParseCommandLineArg(argv[x]);
     }
 
@@ -1000,7 +1001,7 @@
     StartThread(gMainRPCThreadId, 0);
 
     param.attr = TH_C;
-    param.thread = snd_StartEELoaderMessaging();
+    param.thread = snd_StartEELoaderMessaging;
     param.priority = gThreadPriority_RPC + 1;
     param.stacksize = 0x800;
     param.option = 0;

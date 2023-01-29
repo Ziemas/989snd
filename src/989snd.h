@@ -19,6 +19,7 @@ void snd_DumpVersionAndInfo();
 void snd_ShowError(SInt32 num, UInt32 a1, UInt32 a2, UInt32 a3, UInt32 a4);
 SInt32 snd_GetVal(char *st);
 
+void snd_CMD_SL_INIT(SInt8 *msg_data);
 void snd_CMD_SL_CLOSE(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANK(SInt8 *msg_data);
 void snd_CMD_SL_LOADBANKBYLOC(SInt8 *msg_data);
