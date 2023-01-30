@@ -210,6 +210,7 @@
             gNoiseOwnerVoice[0] = voice;
         }
     }
+
     if (voice == -1 && gNoiseOwnerPriority[1] < priority && gVoiceRanges[vol_group].max >= 24) {
         if (gVoiceRanges[vol_group].min < 24) {
             range_temp = gVoiceRanges[vol_group].min;
@@ -225,9 +226,12 @@
             gNoiseOwnerVoice[1] = voice;
         }
     }
+
     if (!dis) {
         CpuResumeIntr(intr_state);
     }
+
+    return voice;
 }
 
 /* 00034294 000348d8 */ SInt32 snd_AllocateVoice(/* 0x0(sp) */ SInt32 vol_group, /* 0x4(sp) */ SInt32 priority) {

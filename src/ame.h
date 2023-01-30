@@ -8,6 +8,7 @@ enum MMIDI_FLAG {
 };
 
 UInt32 snd_PlayAMESound(MIDISoundPtr sound, SInt32 vol, SInt32 pan, SInt16 pitch_mod, int bend);
+SInt32 snd_StartAMESegment(AMEHandlerPtr parent, SInt32 segment);
 void snd_SetAMESoundVolumePan(UInt32 handle, SInt32 vol, SInt32 pan);
 void snd_SetAMESoundPitchModifier(UInt32 handle, SInt16 mod);
 

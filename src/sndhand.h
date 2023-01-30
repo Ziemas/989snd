@@ -42,6 +42,7 @@ void snd_StopHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child, SInt32 silence, 
 void snd_StopAllHandlersForSound(SoundPtr snd, SInt32 silence, bool vlimit_stop);
 
 MIDIHandlerPtr snd_GetFreeMIDIHandler();
+AMEHandlerPtr snd_GetFreeAMEHandler();
 
 void snd_ActivateHandler(GSoundHandlerPtr snd);
 
