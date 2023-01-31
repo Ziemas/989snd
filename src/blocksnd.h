@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+#define GRAIN_ARG(x) (grain->OpcodeData.MicroOp.Arg[(x)])
+
 enum GRAIN_TYPE {
     GRAIN_TYPE_TONE = 1,
 };
@@ -13,13 +15,15 @@ enum BLOCK_FLAG {
 };
 
 UInt32 snd_PlaySFX(SFXBlock2Ptr block, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend);
+UInt32 snd_PlaySFX_EX(SFXBlock2Ptr block, SInt32 sound, SInt32 vol, SInt32 pan, int pitch_mod, int bend, int sfx_vol, int sfx_pan);
 UInt32 snd_PlaySFXWithStruct(SFXBlock2Ptr block, SInt32 sound, SInt16 sfx_vol, SInt16 sfx_pan, SndPlayParamsPtr params);
 
 bool snd_DoBlockSoundStop(BlockSoundHandlerPtr handler, SInt32 silence, bool vlimit_stop);
 
 SInt32 snd_ProcessBlockSoundTick(BlockSoundHandlerPtr handler);
+void snd_UpdateSFXPitch(BlockSoundHandlerPtr hand);
 SInt32 snd_DoesSFXLoop(SFXBlock2Ptr block, SInt32 sound);
-
+void snd_SFXOwnerProc(SInt32 voice, UInt32 owner, SInt32 flag);
 void snd_SetSFXPitch(UInt32 handle, SInt32 pitch);
 void snd_SetSFXPitchbend(UInt32 handle, SInt16 bend);
 void snd_SetSFXVolPan(UInt32 handle, SInt32 vol, SInt32 pan, SInt32 cause);
@@ -32,7 +36,11 @@ SInt8 snd_GetSFXSoundReg(UInt32 handle, SInt32 which);
 void snd_SetSFXSoundReg(UInt32 handle, SInt32 which, SInt8 val);
 void snd_SetAllSFXSoundReg(UInt32 handle, SInt8 *vals);
 
-SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
+SInt32 snd_DoGrain(BlockSoundHandlerPtr handler);
+SInt32 snd_CollapsePan(SInt32 g_pan, SInt32 app_vol, SFX2 *sfx);
+SInt8 snd_ScalePriorityForVolume(SInt32 vol, TonePtr tone);
+
+SInt32 snd_SFX_GRAIN_TYPE_NULL(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_XREF_ID(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);
 SInt32 snd_SFX_GRAIN_TYPE_XREF_NUM(BlockSoundHandlerPtr handler, SFX2Ptr sfx, SFXGrain2Ptr grain);

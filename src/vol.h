@@ -30,4 +30,9 @@ void snd_MakeVolumesB(SInt32 bank_vol, SInt32 snd_vol,
                       SInt32 snd_pan, SInt32 prog_vol,
                       SInt32 prog_pan, SInt32 tone_vol,
                       SInt32 tone_pan, SpuVolume *spu_vol);
+
+void snd_MakeVolumes(SInt32 snd_vol, SInt32 snd_pan,
+                     SInt32 prog_vol, SInt32 prog_pan,
+                     SInt32 tone_vol, SInt32 tone_pan,
+                     SpuVolume *spu_vol);
 #endif // VOL_H_

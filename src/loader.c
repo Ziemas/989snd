@@ -1320,6 +1320,7 @@
 /* 00014a60 00014b00 */ MIDIBlockHeaderPtr snd_FindMIDIBlock(/* 0x0(sp) */ UInt32 id) {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
     for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock) {
+        printf("walk %p, id %d (search %d)\n", walk, walk->ID, id);
         if (walk->ID == id) {
             break;
         }
@@ -1331,8 +1332,10 @@
 /* 00014b00 00014ba8 */ void snd_InsertMIDIBlockInList(/* 0x0(sp) */ MIDIBlockHeaderPtr midi) {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
     if (gMIDIListHead != NULL) {
-        for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock)
-            ;
+        walk = gMIDIListHead;
+        while (walk->NextMIDIBlock != NULL) {
+            walk = walk->NextMIDIBlock;
+        }
         walk->NextMIDIBlock = midi;
     } else {
         gMIDIListHead = midi;

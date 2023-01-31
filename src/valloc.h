@@ -35,6 +35,7 @@ SInt32 snd_ExternVoiceAlloc(SInt32 vol_group, SInt32 priority);
 void snd_ExternVoiceFree(SInt32 voice);
 
 SInt32 snd_AllocateVoice(SInt32 vol_group, SInt32 priority);
+SInt32 snd_AllocateNoiseVoice(SInt32 vol_group, SInt32 priority);
 void snd_StartVAGVoice(SInt32 voice, bool noise);
 
 void snd_PitchBendTone(TonePtr tone, SInt32 pb, SInt32 pm, SInt32 note, SInt32 fine, SInt32 *new_note, SInt32 *new_fine);

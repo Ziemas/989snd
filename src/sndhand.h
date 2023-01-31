@@ -36,15 +36,18 @@ enum NUM_HANDLERS {
 
 void snd_InitSoundHandlers();
 
+SInt32 snd_GetNextHandlerVoice(GSoundHandlerPtr snd, SInt32 start_v);
 void snd_UpdateHandlers();
 
 void snd_StopHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child, SInt32 silence, bool vlimit_stop);
 void snd_StopAllHandlersForSound(SoundPtr snd, SInt32 silence, bool vlimit_stop);
 
+BlockSoundHandlerPtr snd_GetFreeBlockSoundHandler(SFX2 *sfx, SInt32 vol, bool parent);
 MIDIHandlerPtr snd_GetFreeMIDIHandler();
 AMEHandlerPtr snd_GetFreeAMEHandler();
 
 void snd_ActivateHandler(GSoundHandlerPtr snd);
+void snd_DeactivateHandler(GSoundHandlerPtr snd, SInt32 and_child);
 
 SInt32 snd_UpdateEffect(EffectChainPtr effect, GSoundHandlerPtr owner);
 

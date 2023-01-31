@@ -1,3 +1,4 @@
+#include "LFO.h"
 #include "types.h"
 #include "util.h"
 
@@ -43,15 +44,35 @@
     UNIMPLEMENTED();
 }
 
-/* 00004364 0000444c */ void snd_InitLFO(/* 0x0(sp) */ struct LFOTracker *tracker) {}
+/* 00004364 0000444c */ void snd_InitLFO(/* 0x0(sp) */ struct LFOTracker *tracker) {
+    UNIMPLEMENTED();
+}
+
 /* 0000444c 000044e4 */ void snd_RemoveLFOsForHandler(/* 0x0(sp) */ BlockSoundHandlerPtr handler) {
     /* -0x10(sp) */ SInt32 i;
-    UNIMPLEMENTED();
+    for (i = 0; i < 4; i++) {
+        snd_RemoveLFO(&handler->lfo[i]);
+    }
 }
 
 /* 000044e4 00004628 */ void snd_RemoveLFO(/* 0x0(sp) */ struct LFOTracker *lfo) {
     /* -0x10(sp) */ struct LFOTracker *walk;
-    UNIMPLEMENTED();
+    lfo->running_flags &= ~1;
+
+    if (gActiveLFOs == lfo) {
+        gActiveLFOs = lfo->next;
+        gNumLFOsInUse--;
+    } else {
+        walk = gActiveLFOs;
+        while (walk != NULL && walk->next != lfo) {
+            walk = walk->next;
+        }
+
+        if (walk != NULL) {
+            walk->next = walk->next->next;
+            gNumLFOsInUse--;
+        }
+    }
 }
 
 /* 00004628 00004774 */ bool snd_InsertLFO(/* 0x0(sp) */ struct LFOTracker *lfo) {
@@ -72,7 +93,7 @@
 /* 00004b44 00004c44 */ void snd_HandleLFOs() {
     /* -0x10(sp) */ struct LFOTracker *tracker;
     /* -0xc(sp) */ UInt32 flags;
-    //UNIMPLEMENTED();
+    // UNIMPLEMENTED();
 }
 
 /* 00004c44 00004dc8 */ void snd_CalcLFODepth(/* 0x0(sp) */ struct LFOTracker *lfo) {

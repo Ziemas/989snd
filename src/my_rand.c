@@ -1,3 +1,4 @@
+#include "my_rand.h"
 #include "types.h"
 /* data 13d8 */ static SInt16 r250_index = 0;
 /* data 13dc */ static UInt16 r250_buffer[250] = {

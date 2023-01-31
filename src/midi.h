@@ -5,7 +5,7 @@
 
 enum {
     MID_ID = 0x2044494D,
-    MMID_ID = 0,
+    MMID_ID = 0x44494d4d,
 
     NUM_MIDI_CHANNELS = 16,
 };
