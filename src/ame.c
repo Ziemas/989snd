@@ -1,6 +1,7 @@
 #include "ame.h"
 #include "989snd.h"
 #include "midi.h"
+#include "playsnd.h"
 #include "sndhand.h"
 #include "stick.h"
 #include "types.h"
@@ -179,7 +180,266 @@
     /* -0x14(sp) */ SInt32 stop;
     /* -0x10(sp) */ SInt8 *stream_end;
     /* -0xc(sp) */ AMEHandlerPtr ame_handler;
-    UNIMPLEMENTED();
+
+    if (stream == NULL) {
+        return (SInt8 *)1;
+    }
+
+    if (stream->SH.parent != NULL) {
+        ame_handler = (AMEHandlerPtr)stream->SH.parent;
+    } else {
+        ame_handler = (AMEHandlerPtr)stream;
+    }
+
+    command_ptr = ame_header;
+    ignore_next_command = 0;
+    done = 0;
+    stop = 0;
+
+    while (!done) {
+        next_command = *command_ptr++;
+        switch (next_command) {
+        case 0:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                } else {
+                    ignore_next_command = gGlobalExcite < command_ptr[0] + 1;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 1:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                } else {
+                    ignore_next_command = gGlobalExcite != command_ptr[0] + 1;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 2:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                } else {
+                    ignore_next_command = gGlobalExcite > command_ptr[0] + 1;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 3:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                } else {
+                    stream_to_stop = snd_FindAMEStream(stream, command_ptr[0]);
+                    if (&stream_to_stop->MH == stream) {
+                        stop = 1;
+                        done = 1;
+                    } else {
+                        snd_StopAMESegment(&stream_to_stop->MH);
+                    }
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 4:
+            if (ignore_next_command == 1)
+                ignore_next_command = 2;
+            break;
+        case 5:
+            if (ignore_next_command == 2)
+                ignore_next_command = 0;
+            break;
+        case 6:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                ignore_next_command = command_ptr[1] - 1 < ame_handler->MIDIRegister[command_ptr[0]];
+            }
+            command_ptr += 2;
+            break;
+        case 7:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                ignore_next_command = ame_handler->MIDIRegister[command_ptr[0]] < command_ptr[1] + 1;
+            }
+            command_ptr += 2;
+            break;
+        case 11:
+            ame_handler->MIDIMacro[command_ptr[0]] = &command_ptr[1];
+            while (*command_ptr != 0xf7) {
+                command_ptr++;
+            }
+            command_ptr++;
+            break;
+        case 12:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                stream_end = snd_AMEFunction(stream, ame_handler->MIDIMacro[command_ptr[0]]);
+                if (stream_end == NULL) {
+                    stop = 1;
+                    done = 1;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 13:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                stop = 1;
+                done = 1;
+                snd_StartAMESegment(ame_handler, ame_handler->MIDIRegister[command_ptr[0]] - 1);
+            }
+            command_ptr += 1;
+            break;
+        case 14:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                snd_StartAMESegment(ame_handler, ame_handler->MIDIRegister[command_ptr[0]] - 1);
+            }
+            command_ptr += 1;
+            break;
+        case 15:
+            if (ignore_next_command) {
+                while (*command_ptr != 0xf7) {
+                    command_ptr++;
+                }
+                command_ptr++;
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                group = *command_ptr++;
+                ame_handler->group[group].basis = *command_ptr++;
+                for (y = 0; *command_ptr != 0xf7; y++) {
+                    ame_handler->group[group].channel[y] = *command_ptr++;
+                    ame_handler->group[group].excite_min[y] = *command_ptr++;
+                    ame_handler->group[group].excite_max[y] = *command_ptr++;
+                }
+                ame_handler->group[group].num_channels = y;
+                command_ptr += 1;
+            }
+            break;
+        case 16:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                if (ame_handler->group[command_ptr[0]].basis == 0) {
+                    compare_value = gGlobalExcite;
+                } else {
+                    compare_value = ame_handler->MIDIRegister[ame_handler->group[command_ptr[0]].basis - 1];
+                }
+                for (counter = 0; counter < ame_handler->group[command_ptr[0]].num_channels; counter++) {
+                    if (ame_handler->group[command_ptr[0]].excite_min[counter] - 1 >= compare_value ||
+                        ame_handler->group[command_ptr[0]].excite_max[counter] + 1 < compare_value) {
+                        snd_MuteMIDIChannel(stream, ame_handler->group[command_ptr[0]].channel[counter]);
+                    } else {
+                        snd_UnmuteMIDIChannel(stream, ame_handler->group[command_ptr[0]].channel[counter]);
+                    }
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 17:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                stop = 1;
+                done = 1;
+                snd_StartAMESegment(ame_handler, command_ptr[0]);
+            }
+            command_ptr += 1;
+            break;
+        case 18:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                snd_StartAMESegment(ame_handler, command_ptr[0]);
+            }
+            command_ptr += 1;
+            break;
+        case 19:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                ame_handler->MIDIRegister[command_ptr[0]] = command_ptr[1];
+            }
+            command_ptr += 2;
+            break;
+        case 20:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                if (ame_handler->MIDIRegister[command_ptr[0]] != 127) {
+                    ame_handler->MIDIRegister[command_ptr[0]]++;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 21:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                if (ame_handler->MIDIRegister[command_ptr[0]] > 0) {
+                    ame_handler->MIDIRegister[command_ptr[0]]--;
+                }
+            }
+            command_ptr += 1;
+            break;
+        case 22:
+            if (ignore_next_command) {
+                if (ignore_next_command == 1) {
+                    ignore_next_command = 0;
+                }
+            } else {
+                ignore_next_command = ame_handler->MIDIRegister[command_ptr[0]] != command_ptr[1];
+            }
+            command_ptr += 2;
+            break;
+
+        default:
+            break;
+        }
+
+        if (*ame_header == 0xf7) {
+            done = 1;
+        }
+    }
+
+    if (stop) {
+        return 0;
+    }
+
+    return command_ptr;
 }
 
 /* 00006600 00006744 */ void snd_SetMIDIRegister(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 reg, /* -0x10(sp) */ SInt16 value) {

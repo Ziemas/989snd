@@ -16,6 +16,8 @@ void snd_SetupMIDIStreamHandler(MIDIHandlerPtr hand, MIDIBlockHeaderPtr stream);
 void snd_ResetControllers(MIDIHandlerPtr stream);
 
 MIDIBlockHeaderPtr snd_GetRealMIDIDataStream(MIDISoundPtr sound);
+void snd_MuteMIDIChannel(MIDIHandlerPtr stream, SInt32 channel);
+void snd_UnmuteMIDIChannel(MIDIHandlerPtr stream, SInt32 channel);
 SInt32 snd_ProcessMIDITick(MIDIHandlerPtr stream);
 
 UInt32 ReadVarLen(UInt8 *buffer, SInt32 *used_bytes);
