@@ -570,6 +570,8 @@
         }
         handler->Registers[GRAIN_ARG(0)] = work32;
     }
+
+    return 0;
 }
 
 /* 0000bf1c 0000c0e0 */ SInt32 snd_SFX_GRAIN_TYPE_TEST_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -593,6 +595,8 @@
             handler->NextGrain++;
         }
     }
+
+    return 0;
 }
 
 /* 0000c0e0 0000c118 */ SInt32 snd_SFX_GRAIN_TYPE_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -743,7 +747,7 @@
 
 /* 0000da2c 0000e18c */ void snd_SetSFXVolPan(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 vol, /* 0x8(sp) */ SInt32 pan, /* 0xc(sp) */ SInt32 cause) {
     /* -0x38(sp) */ BlockSoundHandlerPtr hand;
-    /* -0x34(sp) */ SInt32 uses_voice;
+    /* -0x34(sp) */ SInt32 uses_voice = -1;
     /* -0x30(sp) */ SInt32 own_the_allocator;
     /* -0x2c(sp) */ SFX2Ptr sfx;
     /* -0x28(sp) */ SInt32 new_vol;
@@ -754,7 +758,99 @@
     /* -0x14(sp) */ SInt32 dis;
     /* -0x10(sp) */ SpuVolume spu_vol;
     /* -0xc(sp) */ SInt32 g_pan;
-    UNIMPLEMENTED();
+
+    hand = snd_CheckHandlerStillActive(handle);
+    if (hand == NULL) {
+        return;
+    }
+
+    sfx = hand->SH.Sound;
+    if (vol >= 0) {
+        if (vol != 0x7FFFFFFF) {
+            hand->App_Vol = vol;
+        }
+    } else {
+        hand->App_Vol = -1024 * vol / 127;
+    }
+
+    if (pan == -1) {
+        hand->App_Pan = sfx->Pan;
+    } else if (pan != -2) {
+        hand->App_Pan = pan;
+    }
+
+    new_vol = ((hand->App_Vol * hand->SH.Original_Vol) >> 10) + hand->LFO_Vol;
+    if (new_vol > 127) {
+        new_vol = 127;
+    }
+    if (new_vol < 0) {
+        new_vol = 0;
+    }
+
+    new_pan = hand->App_Pan + hand->LFO_Pan;
+    while (new_pan >= 360) {
+        new_pan -= 360;
+    }
+    while (new_pan < 0) {
+        new_pan += 360;
+    }
+
+    if (new_vol == hand->SH.Current_Vol && new_pan == hand->SH.Current_Pan) {
+        return;
+    }
+
+    if (cause == 0 && hand->SH.first_child != NULL) {
+        for (child_walk = hand->SH.first_child; child_walk != NULL; child_walk = child_walk->siblings) {
+            snd_SetSFXVolPan(child_walk->OwnerID, hand->App_Vol * hand->SH.Original_Vol / 127, pan, 0);
+        }
+    }
+
+    hand->SH.Current_Vol = new_vol;
+    hand->SH.Current_Pan = new_pan;
+    own_the_allocator = snd_LockVoiceAllocatorEx(true, 27);
+
+    dis = CpuSuspendIntr(&intr_state);
+
+    while (true) {
+        uses_voice = snd_GetNextHandlerVoice(&hand->SH, uses_voice + 1);
+        if (uses_voice == -1) {
+            break;
+        }
+
+        g_pan = 0;
+        // why not just sfx->flags??
+        if ((((SFX2Ptr)hand->SH.Sound)->Flags & 4) != 0) {
+            g_pan = snd_CollapsePan(gChannelStatus[uses_voice].OwnerData.BlockData.g_pan, hand->App_Vol, sfx);
+        } else {
+            g_pan = gChannelStatus[uses_voice].OwnerData.BlockData.g_pan;
+        }
+
+        snd_MakeVolumes(127,
+                        0,
+                        hand->SH.Current_Vol,
+                        hand->SH.Current_Pan,
+                        gChannelStatus[uses_voice].OwnerData.BlockData.g_vol,
+                        g_pan,
+                        &gChannelStatus[uses_voice].Volume);
+
+        if ((hand->SH.flags & HND_PAUSED) == 0) {
+            spu_vol.left = snd_AdjustVolToGroup(gChannelStatus[uses_voice].Volume.left, hand->SH.VolGroup) >> 1;
+            spu_vol.right = snd_AdjustVolToGroup(gChannelStatus[uses_voice].Volume.right, hand->SH.VolGroup) >> 1;
+
+            sceSdSetParam(SD_VPARAM_VOLL | SD_VOICE(uses_voice / 24, uses_voice % 24), spu_vol.left);
+            sceSdSetParam(SD_VPARAM_VOLR | SD_VOICE(uses_voice / 24, uses_voice % 24), spu_vol.right);
+        }
+
+        gChannelStatus[uses_voice].Priority = snd_ScalePriorityForVolume(hand->App_Vol, gChannelStatus[uses_voice].Tone);
+    }
+
+    if (!dis) {
+        CpuResumeIntr(intr_state);
+    }
+
+    if (own_the_allocator) {
+        snd_UnlockVoiceAllocator();
+    }
 }
 
 /* 0000e18c 0000e240 */ void snd_SetSFXPitch(/* 0x0(sp) */ UInt32 handle, /* 0x4(sp) */ SInt32 pitch) {

@@ -50,7 +50,7 @@
     if (step >= 0x400 && tracker->state_hold2 == 1) {
         tracker->state_hold2 = 0;
         tracker->state_hold1 = ((snd_RandomUInt16() & 0x7fff) - 0x3fff) * 2;
-    } else if (step < 1024 && tracker->state_hold2 == 0) {
+    } else if (step < 0x400 && tracker->state_hold2 == 0) {
         tracker->state_hold2 = 1;
         tracker->state_hold1 = -(snd_RandomUInt16() & 0x7fff) * (snd_RandomUInt16() & 1);
     }
