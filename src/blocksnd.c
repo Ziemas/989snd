@@ -600,7 +600,7 @@
 }
 
 /* 0000c0e0 0000c118 */ SInt32 snd_SFX_GRAIN_TYPE_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return 0;
 }
 
 /* 0000c118 0000c284 */ SInt32 snd_SFX_GRAIN_TYPE_GOTO_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
