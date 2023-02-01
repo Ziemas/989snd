@@ -416,7 +416,42 @@
     /* -0x18(sp) */ struct LFOTracker *lfo;
     /* -0x14(sp) */ SInt32 index;
     /* -0x10(sp) */ LFOParams *lfop;
-    UNIMPLEMENTED();
+    lfop = handler->block->GrainData + (grain->OpcodeData.Opcode &= 0xFFFFFF);
+    index = lfop->which_lfo;
+    lfo = &handler->lfo[index];
+
+    lfo->target = lfop->target;
+    if (lfo->target == 0) {
+        snd_RemoveLFO(lfo);
+        lfo->type = 0;
+        return 0;
+    }
+
+    lfo->type = lfop->shape;
+    lfo->target = lfop->target;
+    lfo->target_extra = lfop->target_extra;
+    lfo->setup_flags = lfop->flags;
+    lfo->depth = lfop->depth;
+    lfo->orig_depth = lfop->depth;
+    lfo->step_size = lfop->step_size;
+    lfo->orig_step_size = lfop->step_size;
+    lfo->state_hold1 = 0;
+    lfo->last_lfo = 0;
+
+    if (lfo->type == 2) {
+        lfo->state_hold1 = lfop->duty_cycle;
+    }
+
+    lfo->state_hold2 = 0;
+
+    if ((lfo->setup_flags & 2) != 0) {
+        lfo->next_step = (snd_RandomUInt16() & 0x7FF) << 16;
+    } else {
+        lfo->next_step = lfop->start_offset << 16;
+    }
+
+    snd_InitLFO(lfo);
+    return 0;
 }
 
 /* 0000b18c 0000b1c4 */ SInt32 snd_SFX_GRAIN_TYPE_CONTROL_NULL(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {

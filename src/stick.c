@@ -61,6 +61,7 @@
     if (gVoiceAllocatorInUse || gLockMasterTick) {
         gTickAttentionNeeded++;
         if (gTickAttentionNeeded > 480) {
+            printf("Sound System Tick locked out for 2 seconds.\n");
             printf("     Tick Owner list:\n");
             for (int i = 0; i < 32; ++i)
                 printf("         [%d] = 0x%8.8x\n", i, gMasterTickOwner[i]);
