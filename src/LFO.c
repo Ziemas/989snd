@@ -209,6 +209,8 @@
     default:
         break;
     }
+
+    return ret;
 }
 
 /* 00004b44 00004c44 */ void snd_HandleLFOs() {

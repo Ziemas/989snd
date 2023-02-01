@@ -298,6 +298,7 @@
 /* 0000a23c 0000a274 */ SInt32 snd_SFX_GRAIN_TYPE_NULL(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     UNIMPLEMENTED();
 }
+
 /* 0000a274 0000ae90 */ SInt32 snd_SFX_GRAIN_TYPE_TONE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x20(sp) */ SInt32 voice;
     /* -0x1c(sp) */ SInt32 g_pan;
@@ -384,7 +385,9 @@
         gChannelStatus[voice].Current_PM = handler->SH.Current_PM;
         gChannelStatus[voice].Priority = priority;
         gChannelStatus[voice].VolGroup = sfx->VolGroup;
-        if ((handler->SH.Sound->Flags & 4) != 0) {
+
+        // why not just sfx->flags??
+        if ((((SFX2Ptr)handler->SH.Sound)->Flags & 4) != 0) {
             g_pan = snd_CollapsePan(gChannelStatus[voice].OwnerData.BlockData.g_pan, handler->App_Vol, sfx);
         } else {
             g_pan = gChannelStatus[voice].OwnerData.BlockData.g_pan;
@@ -593,6 +596,7 @@
 }
 
 /* 0000c0e0 0000c118 */ SInt32 snd_SFX_GRAIN_TYPE_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
+    UNIMPLEMENTED();
 }
 
 /* 0000c118 0000c284 */ SInt32 snd_SFX_GRAIN_TYPE_GOTO_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -622,10 +626,26 @@
     UNIMPLEMENTED();
 }
 
-/* 0000c448 0000c4e4 */ SInt32 snd_SFX_GRAIN_TYPE_WAIT_FOR_ALL_VOICES(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {}
+/* 0000c448 0000c4e4 */ SInt32 snd_SFX_GRAIN_TYPE_WAIT_FOR_ALL_VOICES(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
+    UNIMPLEMENTED();
+}
+
 /* 0000c4e4 0000c664 */ SInt32 snd_SFX_GRAIN_TYPE_PLAY_CYCLE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ SInt32 work32;
-    UNIMPLEMENTED();
+    if (handler->sk_doing_skipping_play) {
+        snd_ShowError(13, 0, 0, 0, 0);
+        return -1;
+    }
+    work32 = GRAIN_ARG(2);
+    GRAIN_ARG(2) += 1;
+    if (GRAIN_ARG(2) == GRAIN_ARG(1)) {
+        GRAIN_ARG(2) = 0;
+    }
+    handler->NextGrain += GRAIN_ARG(1) * work32;
+    handler->sk_grains_to_play = GRAIN_ARG(1) + 1;
+    handler->sk_grains_to_skip = (GRAIN_ARG(0) - 1 - work32) * GRAIN_ARG(1);
+    handler->sk_doing_skipping_play = 1;
+    return 0;
 }
 
 /* 0000c664 0000c800 */ SInt32 snd_SFX_GRAIN_TYPE_ADD_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -884,6 +904,7 @@
             return 360 - (360 - g_pan) * (app_vol - 170) / 684;
         }
     }
+
     return g_pan;
 }
 
