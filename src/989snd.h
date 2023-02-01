@@ -11,6 +11,8 @@ extern struct Extern989MonitorInfo *g989Monitor;
 
 Extern989HandlerPtr snd_FindExternProcHandler(UInt32 id);
 
+SInt32 snd_DoExternCall(UInt32 proc_id, SInt32 func_index, SInt32 arg1, SInt32 arg2, SInt32 arg3, SInt32 arg4, SInt32 arg5);
+
 void snd_EEDMADone(SInt32 *sema_id_ptr);
 
 void snd_ParseCommandLineArg(char *arg);

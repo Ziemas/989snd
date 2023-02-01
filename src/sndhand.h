@@ -15,6 +15,7 @@ enum HND_TYPE {
 enum HND_FLAG {
     HND_PAUSED = 2,
     HND_UNK4 = 4,
+    HND_VLIMIT = 0x20,
 };
 
 enum SFX_FLAG {

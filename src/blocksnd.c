@@ -284,19 +284,57 @@
 }
 
 /* 00009f78 0000a140 */ bool snd_DoBlockSoundStop(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SInt32 silence, /* 0x8(sp) */ bool vlimit_stop) {
-    /* -0x10(sp) */ SInt32 stop_sound;
-    /* -0xc(sp) */ SInt32 stop_index;
-    UNIMPLEMENTED();
+    /* -0x10(sp) */ SInt32 stop_sound = 0;
+    /* -0xc(sp) */ SInt32 stop_index = snd_GetOnStopGrainIndex(handler);
+    if (stop_index != -1 && silence == 0) {
+        snd_LockMasterTick(19);
+        snd_KeyOffVoicesEx(&handler->SH.Voices, 0);
+        handler->SH.Voices.core[1] = 0;
+        handler->SH.Voices.core[0] = 0;
+        handler->NextGrain = stop_index + 1;
+        if (vlimit_stop) {
+            handler->SH.flags |= 0x20;
+        }
+        while (!stop_sound && handler->NextGrain != 1) {
+            stop_sound = snd_DoGrain(handler);
+        }
+
+        snd_UnlockMasterTick();
+
+        if (handler->SH.Voices.core[1] != 0 ||
+            handler->SH.Voices.core[1] != 0 ||
+            handler->SH.first_child != NULL) {
+            return 1;
+        }
+    }
+
+    snd_RemoveLFOsForHandler(handler);
+    return false;
 }
 
 /* 0000a140 0000a23c */ SInt32 snd_GetOnStopGrainIndex(/* 0x0(sp) */ BlockSoundHandlerPtr handler) {
     /* -0x10(sp) */ SInt32 i;
-    /* -0xc(sp) */ SFX2Ptr sfx;
-    UNIMPLEMENTED();
+    /* -0xc(sp) */ SFX2Ptr sfx = handler->SH.Sound;
+
+    for (i = 0;; i++) {
+        if (i >= sfx->NumGrains) {
+            return -1;
+        }
+
+        if (sfx->FirstGrain[i].OpcodeData.MicroOp.Type == GRAIN_ON_STOP_MARKER) {
+            break;
+        }
+    }
+
+    if (i == sfx->NumGrains - 1) {
+        return -1;
+    } else {
+        return i;
+    }
 }
 
 /* 0000a23c 0000a274 */ SInt32 snd_SFX_GRAIN_TYPE_NULL(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return 0;
 }
 
 /* 0000a274 0000ae90 */ SInt32 snd_SFX_GRAIN_TYPE_TONE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -458,7 +496,7 @@
 }
 
 /* 0000b18c 0000b1c4 */ SInt32 snd_SFX_GRAIN_TYPE_CONTROL_NULL(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return 0;
 }
 /* 0000b1c4 0000b1fc */ SInt32 snd_SFX_GRAIN_TYPE_LOOP_START(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     UNIMPLEMENTED();
@@ -476,7 +514,7 @@
 }
 
 /* 0000b45c 0000b494 */ SInt32 snd_SFX_GRAIN_TYPE_STOP(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return -1;
 }
 /* 0000b494 0000b558 */ SInt32 snd_GetSoundIndexInBlock(/* 0x0(sp) */ SFXBlock2Ptr block, /* 0x4(sp) */ SFX2 *sfx) {
     /* -0x10(sp) */ int i;
@@ -608,7 +646,7 @@
     /* -0x14(sp) */ SInt32 i;
     /* -0x10(sp) */ SInt32 found = 0;
     for (i = 0; i < sfx->NumGrains && !found; i++) {
-        if (sfx->FirstGrain[i].OpcodeData.MicroOp.Type == 0x23 &&
+        if (sfx->FirstGrain[i].OpcodeData.MicroOp.Type == GRAIN_MARKER &&
             sfx->FirstGrain[i].OpcodeData.MicroOp.Arg[0] == work32) {
             handler->NextGrain = i - 1;
             found = 1;
@@ -673,7 +711,8 @@
 
 /* 0000ca64 0000cb1c */ SInt32 snd_SFX_GRAIN_TYPE_PLUGIN_MESSAGE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ PluginParams *pp;
-    UNIMPLEMENTED();
+    pp = handler->block->GrainData + (grain->OpcodeData.Opcode & 0xFFFFFF);
+    return snd_DoExternCall(pp->id, pp->index, handler->SH.OwnerID, (SInt32)pp->data, (SInt32)handler, 0, 0);
 }
 
 /* 0000cb1c 0000cec8 */ SInt32 snd_SFX_GRAIN_TYPE_BRANCH(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
