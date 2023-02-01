@@ -730,7 +730,7 @@
     }
 
     handler->NextGrain++;
-    if (handler->NextGrain >= sfx->NumGrains - 1) {
+    if (handler->NextGrain >= sfx->NumGrains) {
         if (handler->SH.Voices.core[0] ||
             handler->SH.Voices.core[1] ||
             (handler->SH.first_child != NULL && handler->SH.parent == NULL)) {
