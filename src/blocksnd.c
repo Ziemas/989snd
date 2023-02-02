@@ -1,9 +1,11 @@
 #include "blocksnd.h"
 #include "989snd.h"
 #include "LFO.h"
+#include "init.h"
 #include "intrman.h"
 #include "libsd.h"
 #include "my_rand.h"
+#include "playsnd.h"
 #include "sndhand.h"
 #include "stick.h"
 #include "types.h"
@@ -499,12 +501,25 @@
     return 0;
 }
 /* 0000b1c4 0000b1fc */ SInt32 snd_SFX_GRAIN_TYPE_LOOP_START(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return 0;
 }
 /* 0000b1fc 0000b328 */ SInt32 snd_SFX_GRAIN_TYPE_LOOP_END(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    /* -0x10(sp) */ SInt32 found;
+    /* -0x10(sp) */ SInt32 found = 0;
     /* -0xc(sp) */ SInt32 i;
-    UNIMPLEMENTED();
+
+    for (i = handler->NextGrain - 1; i >= 0 && !found; i--) {
+        if (sfx->FirstGrain[i].OpcodeData.MicroOp.Type == GRAIN_LOOP_START) {
+            handler->NextGrain = i - 1;
+            found = 1;
+        }
+    }
+
+    if (!found) {
+        snd_ShowError(8, 0, 0, 0, 0);
+        return -1;
+    }
+
+    return 0;
 }
 
 /* 0000b328 0000b45c */ SInt32 snd_SFX_GRAIN_TYPE_LOOP_CONTINUE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -545,8 +560,9 @@
 }
 
 /* 0000b73c 0000b7b8 */ SInt32 snd_SFX_GRAIN_TYPE_RAND_DELAY(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    return snd_RandomUInt16() % ((grain->OpcodeData.Opcode & 0xFFFFFF) + 1);
 }
+
 /* 0000b7b8 0000b8c8 */ SInt32 snd_SFX_GRAIN_TYPE_RAND_PB(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ SInt32 work32;
     work32 = snd_RandomUInt16();
@@ -561,7 +577,16 @@
 
 /* 0000b9b8 0000ba98 */ SInt32 snd_SFX_GRAIN_TYPE_ADD_PB(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ SInt32 work32;
-    UNIMPLEMENTED();
+    work32 = handler->Current_PB + 0x7fff * GRAIN_ARG(0) / 127;
+    if (work32 > 32767) {
+        work32 = 32767;
+    }
+    if (work32 < -32768) {
+        work32 = -32768;
+    }
+
+    snd_SetSFXPitchbend(handler->SH.OwnerID, work32);
+    return 0;
 }
 
 /* 0000ba98 0000bb5c */ SInt32 snd_SFX_GRAIN_TYPE_SET_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -590,7 +615,21 @@
 
 /* 0000bc84 0000bdd0 */ SInt32 snd_SFX_GRAIN_TYPE_INC_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ SInt32 work32;
-    UNIMPLEMENTED();
+    if (GRAIN_ARG(0) < 0) {
+        work32 = gBlockGlobalReg[-GRAIN_ARG(0) - 1] + 1;
+        if (work32 > 127) {
+            work32 = 127;
+        }
+        gBlockGlobalReg[-GRAIN_ARG(0) - 1] = work32;
+    } else {
+        work32 = handler->Registers[GRAIN_ARG(0)] + 1;
+        if (work32 > 127) {
+            work32 = 127;
+        }
+        handler->Registers[GRAIN_ARG(0)] = work32;
+    }
+
+    return 0;
 }
 
 /* 0000bdd0 0000bf1c */ SInt32 snd_SFX_GRAIN_TYPE_DEC_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -669,7 +708,13 @@
 }
 
 /* 0000c448 0000c4e4 */ SInt32 snd_SFX_GRAIN_TYPE_WAIT_FOR_ALL_VOICES(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    if (handler->SH.Voices.core[0] == 0 && handler->SH.Voices.core[1] == 0) {
+        return 0;
+    }
+
+    // repeat this grain until voices are off
+    handler->NextGrain--;
+    return 1;
 }
 
 /* 0000c4e4 0000c664 */ SInt32 snd_SFX_GRAIN_TYPE_PLAY_CYCLE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -692,14 +737,41 @@
 
 /* 0000c664 0000c800 */ SInt32 snd_SFX_GRAIN_TYPE_ADD_REGISTER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     /* -0x10(sp) */ SInt32 work32;
-    UNIMPLEMENTED();
+    if (GRAIN_ARG(1) < 0) {
+        work32 = gBlockGlobalReg[-GRAIN_ARG(1) - 1] + GRAIN_ARG(0);
+        if (work32 > 127) {
+            work32 = 127;
+        }
+        if (work32 < -128) {
+            work32 = 128;
+        }
+        gBlockGlobalReg[-GRAIN_ARG(1) - 1] = work32;
+    } else {
+        work32 = handler->Registers[GRAIN_ARG(1)] + GRAIN_ARG(0);
+        if (work32 > 127) {
+            work32 = 127;
+        }
+        if (work32 < -128) {
+            work32 = 128;
+        }
+        handler->Registers[GRAIN_ARG(1)] = work32;
+    }
+
+    return 0;
 }
 
 /* 0000c800 0000c870 */ SInt32 snd_SFX_GRAIN_TYPE_KEY_OFF_VOICES(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    snd_KeyOffVoicesEx(&handler->SH.Voices, false);
+    handler->SH.Voices.core[0] = 0;
+    handler->SH.Voices.core[1] = 0;
+
+    return 0;
 }
 /* 0000c870 0000c8e0 */ SInt32 snd_SFX_GRAIN_TYPE_KILL_VOICES(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    snd_SilenceVoicesEx(&handler->SH.Voices, 0);
+    handler->SH.Voices.core[1] = 0;
+    handler->SH.Voices.core[0] = 0;
+    return 0;
 }
 /* 0000c8e0 0000c934 */ SInt32 snd_SFX_GRAIN_TYPE_ON_STOP_MARKER(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
     UNIMPLEMENTED();
@@ -733,7 +805,95 @@
     /* -0x44(sp) */ SFXBlock2Ptr block;
     /* -0x40(sp) */ struct SndPlayParams params;
     /* -0x10(sp) */ PlaySoundParams *psp;
-    UNIMPLEMENTED();
+
+    if ((handler->SH.flags & HND_VLIMIT) != 0) {
+        return 0;
+    }
+
+    psp = handler->block->GrainData + (grain->OpcodeData.Opcode & 0xFFFFFF);
+    if (handler->SH.Original_Vol == 0) {
+        return 0;
+    }
+
+    // TODO really need to flatten this out
+
+    if (psp->vol < 0) {
+        if (psp->vol < -4) {
+            if (psp->vol == -5) {
+                reg = snd_RandomUInt16() & 0x7F;
+            } else {
+                reg = gBlockGlobalReg[-psp->vol - 6];
+            }
+        } else {
+            reg = handler->Registers[-psp->vol - 1];
+        }
+    } else {
+        reg = psp->vol;
+    }
+
+    if (reg < 0) {
+        reg = -reg;
+    }
+    if (reg > 127) {
+        reg = 127;
+    }
+    vol = reg;
+
+    if (psp->pan < 0) {
+        if (psp->pan < -4) {
+            if (psp->pan == -5) {
+                pan = snd_RandomUInt16() % 360u;
+            } else {
+                reg = gBlockGlobalReg[-psp->pan - 6];
+                if (reg < 0)
+                    reg = -reg;
+                if (reg >= 128)
+                    reg = 127;
+                pan = 360 * reg / 127;
+            }
+        } else {
+            reg = handler->Registers[-psp->pan - 1];
+            if (reg < 0)
+                reg = -reg;
+            if (reg >= 128)
+                reg = 127;
+            pan = 360 * reg / 127;
+        }
+    } else {
+        pan = psp->pan;
+    }
+
+    if (psp->sound_id < 0) {
+        block = NULL;
+        index = snd_FindSoundByName(NULL, psp->snd_name, &block);
+        if (index == 0 || block == NULL) {
+            index = snd_FindSoundByName(handler->block, psp->snd_name, &block);
+            if (gPrefs_Silent != 0) {
+                printf("989snd: Didn't find child sound named -> %s\n", psp->snd_name);
+            }
+            return 0;
+        }
+    } else {
+        block = handler->block;
+        index = psp->sound_id;
+    }
+
+    params.mask = 0x8000007C;
+    params.vol = handler->App_Vol * handler->SH.Original_Vol / 127;
+    params.pan = handler->App_Pan;
+    params.pitch_mod = handler->App_PM;
+    params.pitch_bend = handler->App_PB;
+    params.reg[0] = handler->Registers[0];
+    params.reg[1] = handler->Registers[1];
+    params.reg[2] = handler->Registers[2];
+    params.reg[3] = handler->Registers[3];
+
+    sid = snd_PlaySFXWithStruct(block, index, vol, pan, &params);
+    if (sid != 0) {
+        snd_AttachSoundToHandlersChildList(&handler->SH, sid);
+    }
+
+    return 0;
 }
 
 /* 0000d548 0000d740 */ SInt32 snd_SFX_GRAIN_TYPE_STOPCHILDSOUND(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
@@ -741,11 +901,13 @@
     /* -0x14(sp) */ SInt32 index;
     /* -0x10(sp) */ SFXBlock2Ptr block;
     /* -0xc(sp) */ PlaySoundParams *psp;
+
     UNIMPLEMENTED();
 }
 
 /* 0000d740 0000d79c */ SInt32 snd_SFX_UNKNOWN_GRAIN_TYPE(/* 0x0(sp) */ BlockSoundHandlerPtr handler, /* 0x4(sp) */ SFX2Ptr sfx, /* 0x8(sp) */ SFXGrain2Ptr grain) {
-    UNIMPLEMENTED();
+    snd_ShowError(95, 0, 0, 0, 0);
+    return -1;
 }
 
 /* 0000d79c 0000da2c */ SInt32 snd_DoGrain(/* 0x0(sp) */ BlockSoundHandlerPtr handler) {
@@ -967,7 +1129,7 @@
                               hand->Current_Fine,
                               &note, &fine);
 
-            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(uses_voice / 24, uses_voice % 24),
+            sceSdSetParam(SD_VPARAM_PITCH | SD_VOICE(uses_voice / NUM_VOICE_PER_CORE, uses_voice % NUM_VOICE_PER_CORE),
                           PS1Note2Pitch(gChannelStatus[uses_voice].Tone->CenterNote,
                                         gChannelStatus[uses_voice].Tone->CenterFine,
                                         note,
@@ -980,7 +1142,7 @@
             if (clock > 63) {
                 clock = 63;
             }
-            sceSdSetCoreAttr(SD_CORE_NOISE_CLK | uses_voice / 24, clock);
+            sceSdSetCoreAttr(SD_CORE_NOISE_CLK | uses_voice / NUM_VOICE_PER_CORE, clock);
         }
 
         if (!dis) {
@@ -994,12 +1156,13 @@
 }
 
 /* 0000e8d8 0000e944 */ SInt32 snd_DoesSFXLoop(/* 0x0(sp) */ SFXBlock2Ptr block, /* 0x4(sp) */ SInt32 sound) {
-    UNIMPLEMENTED();
+    return block->FirstSound[sound].Flags & SFX_LOOP;
 }
+
 /* 0000e944 0000eb8c */ void snd_SFXOwnerProc(/* 0x0(sp) */ SInt32 voice, /* 0x4(sp) */ UInt32 owner, /* 0x8(sp) */ SInt32 flag) {
     /* -0x18(sp) */ BlockSoundHandlerPtr snd = (BlockSoundHandlerPtr)owner;
-    /* -0x14(sp) */ SInt32 core = voice / 24;
-    /* -0x10(sp) */ SInt32 c_v = voice % 24;
+    /* -0x14(sp) */ SInt32 core = voice / NUM_VOICE_PER_CORE;
+    /* -0x10(sp) */ SInt32 c_v = voice % NUM_VOICE_PER_CORE;
     /* -0xc(sp) */ BlockSoundHandlerPtr parent;
     snd->SH.Voices.core[core] &= ~(1 << c_v);
     if (snd->SH.Voices.core[0] == 0 &&
@@ -1074,5 +1237,23 @@
     /* -0x18(sp) */ GSoundHandlerPtr walk;
     /* -0x14(sp) */ BlockSoundHandlerPtr hand;
     /* -0x10(sp) */ int x;
-    UNIMPLEMENTED();
+    snd_LockMasterTick(17);
+    for (walk = gActiveSoundListHead; walk != NULL; walk = walk->next) {
+        if (walk->Sound == (SoundPtr)sfx && walk->parent == NULL) {
+            hand = (BlockSoundHandlerPtr)walk;
+            hand->SH.Original_Vol = sfx->Vol;
+            hand->SH.Original_Pan = sfx->Pan;
+            hand->SH.Current_Vol = -1;
+            for (x = 0; x < 4; x++) {
+                if (hand->lfo[x].type != LFO_TYPE_OFF && hand->lfo[x].target == LFO_TARGET_VOL) {
+                    snd_CalcLFODepth(hand->lfo);
+                }
+            }
+
+            snd_SetSFXVolPan(hand->SH.OwnerID, 0x7fffffff, -2, 0);
+            snd_UpdateSFXPitch(hand);
+        }
+    }
+
+    snd_UnlockMasterTick();
 }

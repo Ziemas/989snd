@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+extern GSoundHandlerPtr gActiveSoundListHead;
+
 enum HND_TYPE {
     HANDLER_UNK = 0,
     HANDLER_MIDI = 1,
@@ -19,6 +21,7 @@ enum HND_FLAG {
 };
 
 enum SFX_FLAG {
+    SFX_LOOP = 1,
     SFX_INSTLIMIT = 0x8,
     SFX_INSTLIMIT_VOL = 0x10,
     SFX_INSTLIMIT_TICK = 0x20,
@@ -52,6 +55,7 @@ void snd_DeactivateHandler(GSoundHandlerPtr snd, SInt32 and_child);
 
 SInt32 snd_UpdateEffect(EffectChainPtr effect, GSoundHandlerPtr owner);
 
+void snd_AttachSoundToHandlersChildList(GSoundHandlerPtr handler, UInt32 id);
 GSoundHandlerPtr snd_CheckHandlerStillActive(UInt32 handle);
 
 void snd_FreeEffectChain(EffectChainPtr effect);
