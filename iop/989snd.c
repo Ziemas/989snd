@@ -240,7 +240,7 @@
 }
 
 /* 00000534 00000598 */ void snd_CMD_SL_INIT(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     gEEStatusAddr = (char *)data[0];
     snd_StartSoundSystemEx(data[1]);
 }
@@ -254,17 +254,17 @@
 }
 
 /* 00000630 000006a0 */ void snd_CMD_SL_LOADBANKBYLOC(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = (UInt32)snd_BankLoadByLocEx(data[0], data[1], 0, 0);
 }
 
 /* 000006a0 00000704 */ void snd_CMD_SL_BANKLOADFROMEE(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     *gWriteBackdataOffset = (UInt32)snd_BankLoadFromEEEx(data[0], 0, 0);
 }
 
 /* 00000704 00000768 */ void snd_CMD_SL_BANKLOADFROMIOP(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     *gWriteBackdataOffset = (UInt32)snd_BankLoadFromIOPEx((void *)data[0], 0, 0);
 }
 
@@ -273,7 +273,7 @@
 }
 
 /* 000007c4 0000082c */ void snd_CMD_SL_LOADMMDBYLOC(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = (UInt32)snd_MMDLoadByLoc(data[0], data[1]);
 }
 
@@ -291,7 +291,7 @@
 }
 
 /* 000008f0 00000948 */ void snd_CMD_SL_SETMASTERVOL_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetMasterVolume(data[0], data[1]);
 }
 
@@ -308,7 +308,7 @@
 }
 
 /* 00000a1c 00000a74 */ void snd_CMD_SL_SETMIXERMODE_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetMixerMode(data[0], data[1]);
 }
 
@@ -317,22 +317,22 @@
 }
 
 /* 00000ab4 00000b1c */ void snd_CMD_SL_SETGROUPVOICERANGE(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetGroupVoiceRange(data[0], data[1], data[2]);
 }
 
 /* 00000b1c 00000b74 */ void snd_CMD_SL_SETREVERBTYPE(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetReverbType(data[0], data[1]);
 }
 
 /* 00000b74 00000bdc */ void snd_CMD_SL_SETREVERBDEPTH(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetReverbDepth(data[0], data[1], data[2]);
 }
 
 /* 00000bdc 00000c54 */ void snd_CMD_SL_AUTOVERB(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_AutoReverb(data[0], data[1], data[2], data[3]);
 }
 
@@ -342,12 +342,12 @@
 }
 
 /* 00000d0c 00000db4 */ void snd_CMD_SL_PLAYSOUND_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_PlaySoundVolPanPMPB((SoundBankPtr)data[0], data[1], data[2], data[3], *(SInt16 *)&data[4], *((SInt16 *)(&data[4]) + 2));
 }
 
 /* 00000db4 00000e08 */ void snd_CMD_SL_PLAYSOUNDEX(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SndPlayParamsPtr params = msg_data;
+    /* -0x10(sp) */ SndPlayParamsPtr params = (SndPlayParamsPtr)msg_data;
     *gWriteBackdataOffset = snd_PlaySoundEx(params);
 }
 
@@ -384,17 +384,17 @@
 }
 
 /* 0000100c 00001074 */ void snd_CMD_SL_ISSOUNDALOOPER(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_IsSoundALooper((SoundBankPtr)data[0], data[1]);
 }
 
 /* 00001074 000010dc */ void snd_CMD_SL_SETSOUNDVOLPAN_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetSoundVolPan(data[0], data[1], data[2]);
 }
 
 /* 000010dc 00001144 */ void snd_CMD_SL_GETSOUNDORIGPITCH(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_GetSoundOriginalPitch((SoundBankPtr)data[0], data[1]);
 }
 
@@ -403,42 +403,42 @@
 }
 
 /* 00001194 000011ec */ void snd_CMD_SL_SETSOUNDPITCH_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetSoundPitch(data[0], data[1]);
 }
 
 /* 000011ec 00001244 */ void snd_CMD_SL_SETSOUNDPITCHBEND_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetSoundPitchBend(data[0], data[1]);
 }
 
 /* 00001244 0000129c */ void snd_CMD_SL_SETSOUNDPITCHMOD_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetSoundPitchModifier(data[0], data[1]);
 }
 
 /* 0000129c 00001354 */ void snd_CMD_SL_SETSOUNDPARAMS(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_SetSoundParams(data[0], data[1], data[2], data[3], *(SInt16 *)&data[4], *((SInt16 *)(&data[4]) + 2));
 }
 
 /* 00001354 000013d0 */ void snd_CMD_SL_AUTOVOL_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_AutoVol(data[0], *(SInt16 *)&data[1], *((SInt16 *)(&data[1]) + 2), *(SInt16 *)&data[1]);
 }
 
 /* 000013d0 00001460 */ void snd_CMD_SL_AUTOPAN_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_AutoPan(data[0], data[1], data[2], data[3], data[4]);
 }
 
 /* 00001460 000014d8 */ void snd_CMD_SL_AUTOPITCH_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_AutoPitch(data[0], data[1], data[2], data[3]);
 }
 
 /* 000014d8 00001550 */ void snd_CMD_SL_AUTOPITCHBEND_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_AutoPitchBend(data[0], data[1], data[2], data[3]);
 }
 
@@ -451,34 +451,34 @@
 }
 
 /* 000015d4 0000163c */ void snd_CMD_SL_GETMIDIREGISTER(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_GetMIDIRegister(data[0], data[1]);
 }
 
 /* 0000163c 000016a4 */ void snd_CMD_SL_SETMIDIREGISTER_A(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetMIDIRegister(data[0], data[1], (SInt16)data[3]);
 }
 
 /* 000016a4 0000172c */ void snd_CMD_SL_INITVAGSTREAMINGEX(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_InitVAGStreamingEx(data[0], data[1], data[2], data[3]) != 0;
 }
 
 /* 0000172c 00001794 */ void snd_CMD_SL_SETVAGSTREAMCHANNELRANGE(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetVAGStreamChannelRange(data[0], data[1], data[2]);
 }
 
 /* 00001794 0000180c */ void snd_CMD_SL_SETVAGSTREAMSUBGROUPVOLPAN(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetVAGStreamSubGroupVolPan(data[0], data[1], data[2], data[3]);
 }
 
 /* 0000180c 00001940 */ void snd_CMD_SL_PLAYVAGSTREAMBYNAME(/* 0x0(sp) */ SInt8 *msg_data) {
     /* -0x18(sp) */ char *name1 = NULL;
     /* -0x14(sp) */ char *name2 = NULL;
-    /* -0x10(sp) */ struct PVSBN_struct *data = msg_data;
+    /* -0x10(sp) */ struct PVSBN_struct *data = (PVSBN_structPtr)msg_data;
 
     if (data->name1[0] != 0) {
         name1 = data->name1;
@@ -501,7 +501,7 @@
 }
 
 /* 00001940 00001a78 */ void snd_CMD_SL_PLAYVAGSTREAMBYLOC(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_PlayVAGStreamByLocEx(data[0],
                                                      data[1],
                                                      data[2] & 0xFFFF,
@@ -563,13 +563,13 @@
 }
 
 /* 00001dc4 00001e2c */ void snd_CMD_SL_STREAMSAFECDREAD(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     snd_StreamSafeCdRead(data[0], data[1], (void *)data[2]);
 }
 
 /* 00001e2c 00001f84 */ void snd_CMD_SL_STREAMSAFECDSEARCHFILE(/* 0x0(sp) */ SInt8 *msg_data) {
     /* -0x58(sp) */ UInt32 ee_location = *(UInt32 *)msg_data;
-    /* -0x54(sp) */ char *fname;
+    ///* -0x54(sp) */ char *fname;
     /* -0x50(sp) */ sceCdlFILE cdf;
     /* -0x2c(sp) */ SInt32 ret;
     /* -0x28(sp) */ sceSifDmaData transData;
@@ -609,7 +609,7 @@
 }
 
 /* 00002024 000020dc */ void snd_CMD_SL_INITMOVIESOUND(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = (UInt32)snd_InitMovieSoundEx(data[0], data[1], data[2], data[3], data[4], data[5]);
 }
 
@@ -622,7 +622,7 @@
 }
 
 /* 00002144 000021d4 */ void snd_CMD_SL_STARTMOVIESOUND(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_StartMovieSoundEx((void *)data[0], data[1], data[2], data[3], data[4]);
 }
 
@@ -631,12 +631,12 @@
 }
 
 /* 00002218 00002270 */ void snd_CMD_SL_SETMOVIESOUNDVOLPAN(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetMovieSoundVolPan(data[0], data[1]);
 }
 
 /* 00002270 000022c8 */ void snd_CMD_SL_UPDATEMOVIEADPCM(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_UpdateMovieADPCM(data[0], data[1]);
 }
 
@@ -653,7 +653,7 @@
 }
 
 /* 00002394 00002488 */ void snd_CMD_SL_GETVOICEALLOC(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x18(sp) */ SInt32 core = *(UInt32 *)msg_data;
+    /* -0x18(sp) */ SInt32 core = *(SInt32 *)msg_data;
     /* -0x14(sp) */ SInt32 x;
     /* -0x10(sp) */ SInt32 *SInt32_data = (SInt32 *)gWriteBackdataOffset;
     *SInt32_data = 0;
@@ -669,7 +669,7 @@
 }
 
 /* 000024d8 00002540 */ void snd_CMD_SL_EXTERNVALLOC(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_ExternVoiceAlloc(data[0], data[1]);
 }
 
@@ -694,7 +694,7 @@
 /* 00002634 000026cc */ void snd_CMD_SL_SRAMMARKUSED(/* 0x0(sp) */ SInt8 *msg_data) {
     /* -0x18(sp) */ SInt32 dis;
     /* -0x14(sp) */ SInt32 oldstat;
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     dis = CpuSuspendIntr(&oldstat);
     *gWriteBackdataOffset = snd_SRAMMarkUsed(data[0], data[1]);
     if (!dis) {
@@ -705,7 +705,7 @@
 /* 000026cc 00002754 */ void snd_CMD_SL_SRAMFREE(/* 0x0(sp) */ SInt8 *msg_data) {
     /* -0x18(sp) */ SInt32 dis;
     /* -0x14(sp) */ SInt32 oldstat;
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
 
     dis = CpuSuspendIntr(&oldstat);
     snd_SRAMFree(data[0], data[1]);
@@ -737,22 +737,22 @@
 }
 
 /* 0000283c 0000290c */ void snd_CMD_SL_EXTERNCALL(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_DoExternCall(data[0], data[1], data[2], data[3], data[4], data[5], data[6]);
 }
 
 /* 0000290c 00002990 */ void snd_CMD_SL_EXTERNCALLWITHDATA(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_DoExternCallWithData(data[0], data[1], data[2], (void *)data[3]);
 }
 
 /* 00002990 00002a20 */ void snd_CMD_SL_SETREVERBEX(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetReverbEx(data[0], data[1], data[2], data[3], data[4]);
 }
 
 /* 00002a20 00002a78 */ void snd_CMD_SL_PREALLOCREVERBWORKAREA(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_PreAllocReverbWorkArea(data[0], data[1]);
 }
 
@@ -776,7 +776,7 @@
     /* -0x30(sp) */ SInt32 ret;
     /* -0x2c(sp) */ SInt32 intr_state;
     /* -0x28(sp) */ SInt32 dis;
-    /* -0x24(sp) */ struct GetSoundUserDataCommandStruct *data = msg_data;
+    /* -0x24(sp) */ struct GetSoundUserDataCommandStruct *data = (struct GetSoundUserDataCommandStruct *)msg_data;
     /* -0x20(sp) */ SInt32 did;
     /* -0x1c(sp) */ sceSifDmaData transData;
 
@@ -810,33 +810,33 @@
 }
 
 /* 00002cf0 00002d58 */ void snd_CMD_SL_GETSOUNDREG(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
-    *gWriteBackdataOffset = snd_GetSoundReg(data[0], data[1]);
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
+    *gWriteBackdataOffset = (UInt32)snd_GetSoundReg(data[0], data[1]);
 }
 
 /* 00002d58 00002dc0 */ void snd_CMD_SL_SETSOUNDREG(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
     snd_SetSoundReg(data[0], data[1], data[2]);
 }
 
 /* 00002dc0 00002e1c */ void snd_CMD_SL_GETSFXGLOBALREG(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     *gWriteBackdataOffset = snd_GetSFXGlobalReg(data[0]);
 }
 
 /* 00002e1c 00002e74 */ void snd_CMD_SL_SETSFXGLOBALREG(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ SInt32 *data = msg_data;
+    /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
     snd_SetSFXGlobalReg(data[0], data[1]);
 }
 
 /* 00002e74 00002ecc */ void snd_CMD_SL_SETALLSOUNDREG(/* 0x0(sp) */ SInt8 *msg_data) {
-    /* -0x10(sp) */ UInt32 *data = msg_data;
-    snd_SetAllSoundReg(msg_data[0], &msg_data[1]);
+    /* -0x10(sp) */ UInt32 *data = (UInt32 *)msg_data;
+    snd_SetAllSoundReg(data[0], (SInt8 *)&data[1]);
 }
 
 /* 00002ecc 00002f48 */ void snd_CMD_SL_SETMASTERVOLUMEDUCKER(/* 0x0(sp) */ SInt8 *msg_data) {
     /* -0x10(sp) */ SInt32 *data = (SInt32 *)msg_data;
-    /* -0xc(sp) */ DuckerDefPtr state = &data[1];
+    /* -0xc(sp) */ DuckerDefPtr state = (DuckerDefPtr)&data[1];
 
     if (data[1] == -1) {
         state = NULL;
@@ -858,7 +858,7 @@
 
     command_buffer_walk = batch->buffer;
     for (x = 0; x < batch->num_commands; x++) {
-        SndCommandEntryPtr entry = command_buffer_walk;
+        SndCommandEntryPtr entry = (SndCommandEntryPtr)command_buffer_walk;
         command = entry->command;
         size = entry->size;
         command_buffer_walk += sizeof(struct SndCommandEntry);
@@ -889,7 +889,7 @@
     *(SInt32 *)snd_MESSAGE_RECIEVE_BUFFER = -1;
     sceSifInitRpc(0);
     sceSifSetRpcQueue(&qd, GetThreadId());
-    sceSifRegisterRpc(&sd, 0x123456, snd_EEMessageParser, snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRegisterRpc(&sd, 0x123456, (void *(*)(int, void *, int))snd_EEMessageParser, snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
     sceSifRpcLoop(&qd);
 
     return 0;
@@ -932,7 +932,7 @@
 
     sceSifInitRpc(0);
     sceSifSetRpcQueue(&qd, GetThreadId());
-    sceSifRegisterRpc(&sd, 0x123457, snd_EELoaderMessageParser, snd_LOADER_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
+    sceSifRegisterRpc(&sd, 0x123457, (void *(*)(int, void *, int))snd_EELoaderMessageParser, snd_LOADER_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);
     sceSifRpcLoop(&qd);
 
     return 0;
@@ -1000,7 +1000,7 @@
     SignalSema(gFileReadMutex);
 
     param.attr = TH_C;
-    param.thread = snd_StartEEMessaging;
+    param.thread = (void (*)(void *))snd_StartEEMessaging;
     param.priority = gThreadPriority_RPC;
     param.stacksize = 0x1000;
     param.option = 0;
@@ -1013,7 +1013,7 @@
     StartThread(gMainRPCThreadId, 0);
 
     param.attr = TH_C;
-    param.thread = snd_StartEELoaderMessaging;
+    param.thread = (void (*)(void *))snd_StartEELoaderMessaging;
     param.priority = gThreadPriority_RPC + 1;
     param.stacksize = 0x800;
     param.option = 0;
