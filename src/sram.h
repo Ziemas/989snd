@@ -18,4 +18,6 @@ SInt32 snd_SRAMGetFreeMem();
 SInt32 snd_SRAMMaxFreeBlockSize();
 UInt32 snd_SRAMMarkUsed(UInt32 loc, UInt32 size);
 
+void snd_SRAMDumpFreeBlocks();
+
 #endif // SRAM_H_

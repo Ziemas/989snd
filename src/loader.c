@@ -1044,7 +1044,7 @@
 
         block->GrainData = (void *)((UInt32)block->GrainData + (UInt32)block);
         for (x = 0; x < block->NumGrains; x++) {
-            if (block->FirstGrain[x].OpcodeData.MicroOp.Type == GRAIN_TYPE_TONE) {
+            if (block->FirstGrain[x].OpcodeData.MicroOp.Type == GRAIN_TONE) {
                 tp = (TonePtr)((SInt8 *)block->GrainData + (block->FirstGrain[x].OpcodeData.Opcode & 0xFFFFFF));
                 tp->VAGInSR = (void *)((UInt32)tp->VAGInSR + (UInt32)block->VagsInSR);
             }

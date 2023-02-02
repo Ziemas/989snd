@@ -21,6 +21,10 @@
 #include "valloc.h"
 #include "vol.h"
 
+#ifdef INTERNAL_SNDERR
+#include "error.h"
+#endif
+
 #include <intrman.h>
 #include <stdio.h>
 #include <sysclib.h>
@@ -938,6 +942,10 @@
     /* -0x18(sp) */ SInt32 oldstat;
     /* -0x14(sp) */ int i;
     /* -0x10(sp) */ char *walk;
+
+#ifdef INTERNAL_SNDERR
+    snd_RegisterErrorDisplayFunc(snderr_DisplayError);
+#endif
 
     for (x = 1; x < argc; x++) {
         snd_ParseCommandLineArg(argv[x]);
