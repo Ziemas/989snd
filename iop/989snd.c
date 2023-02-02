@@ -781,24 +781,29 @@
     /* -0x1c(sp) */ sceSifDmaData transData;
 
     ret = snd_GetSoundUserData((SoundBankPtr)data->bank, (char *)data->bank_name, data->snd_index, (char *)data->snd_name, return_hold);
-    if (ret) {
-        transData.src = return_hold;
-        transData.dest = data->destination;
-        transData.size = sizeof(return_hold);
-        transData.attr = 0;
-        dis = CpuSuspendIntr(&intr_state);
-        if (!did) {
-            snd_ShowError(99, 0, 0, 0, 0);
-            *gWriteBackdataOffset = 0;
-            return;
-        }
-        if (!dis) {
-            CpuResumeIntr(intr_state);
-        }
+    if (!ret) {
+        *gWriteBackdataOffset = ret;
+        return;
+    }
 
-        while (sceSifDmaStat(did) >= 0) {
-            WaitSema(gEEDMADoneSema);
-        }
+    transData.src = return_hold;
+    transData.dest = data->destination;
+    transData.size = sizeof(return_hold);
+    transData.attr = 0;
+    dis = CpuSuspendIntr(&intr_state);
+    did = sceSifSetDmaIntr(&transData, 1, snd_EEDMADone, &gEEDMADoneSema);
+
+    if (!did) {
+        snd_ShowError(99, 0, 0, 0, 0);
+        *gWriteBackdataOffset = 0;
+        return;
+    }
+    if (!dis) {
+        CpuResumeIntr(intr_state);
+    }
+
+    while (sceSifDmaStat(did) >= 0) {
+        WaitSema(gEEDMADoneSema);
     }
 
     *gWriteBackdataOffset = ret;
