@@ -83,7 +83,6 @@ void snd_SendCurrentBatch();
             ;
     } while (gSLClientData.server == NULL);
 
-
     gLoadBusy = 0;
     gLoadReturnDef.done = NULL;
     gLoadReturnDef.u_data = 0;
@@ -100,8 +99,8 @@ void snd_SendCurrentBatch();
             ;
     } while (gSLClientLoaderData.server == NULL);
 
-    gCommandBuffeBytesAvail[1] = 4096;
-    gCommandBuffeBytesAvail[0] = 4096;
+    gCommandBuffeBytesAvail[1] = 4092;
+    gCommandBuffeBytesAvail[0] = 4092;
     gSndCommandBuffer1.num_commands = 0;
     gSndCommandBuffer2.num_commands = 0;
 
@@ -112,6 +111,11 @@ void snd_SendCurrentBatch();
     data[1] = flags;
 
     snd_SendIOPCommandAndWait(SL_INIT, sizeof(data), (char *)data);
+
+    printf("-----------------\n");
+    printf("ee command buff1: %p \n", &gSndCommandBuffer1);
+    printf("ee command buff2: %p \n", &gSndCommandBuffer2);
+    printf("-----------------\n");
 }
 
 /* 001aab08 001aad38 */ int snd_FlushSoundCommands() {
@@ -224,7 +228,7 @@ void snd_SendCurrentBatch();
     *(int *)&gSyncStringBuffer[0] = offset;
     strcpy(&gSyncStringBuffer[4], name);
     gLoadReturnValue[0] = -1;
-    SyncDCache(gLoadReturnValue, gLoadReturnValue + sizeof(gLoadReturnValue));
+    SyncDCache(gLoadReturnValue, ((char *)gLoadReturnValue) + sizeof(gLoadReturnValue));
     while (SifCheckStatRpc(&gSLClientLoaderData)) {
         if (!gPrefs_Silent) {
             printf("989snd.c: RPC collision!\n");
@@ -455,12 +459,15 @@ void snd_SendCurrentBatch();
 /* 001ac8f0 001ac920 */ void snd_StopAllSoundsInGroup(/* -0x20(sp) */ unsigned int groups) {
     UNIMPLEMENTED();
 }
+
 /* 001ac920 001ac948 */ unsigned int snd_SoundIsStillPlaying(/* -0x20(sp) */ unsigned int handle) {
-    UNIMPLEMENTED();
+    return snd_SendIOPCommandAndWait(SL_SOUNDISSTILLPLAYING, sizeof(handle), (char *)&handle);
 }
+
 /* 001ac948 001ac978 */ void snd_SoundIsStillPlaying_CB(/* -0x20(sp) */ unsigned int handle, /* a1 5 */ SndCompleteProc cb, /* a2 6 */ unsigned long long user_data) {
-    UNIMPLEMENTED();
+    snd_SendIOPCommandNoWait(SL_SOUNDISSTILLPLAYING, sizeof(handle), (char *)&handle, cb, user_data);
 }
+
 /* 001ac978 001ac9b4 */ void snd_SetSoundVolPan(/* a0 4 */ unsigned int handle, /* v0 2 */ int vol, /* a2 6 */ int pan) {
     /* -0x20(sp) */ int data[3];
     UNIMPLEMENTED();
@@ -545,6 +552,7 @@ void snd_SendCurrentBatch();
 /* 001ace20 001ace50 */ void snd_GetVoiceAllocation_CB(/* -0x20(sp) */ int core, /* a1 5 */ SndCompleteProc cb, /* a2 6 */ unsigned long long user_data) {
     UNIMPLEMENTED();
 }
+
 /* 001ace50 001ad0a8 */ unsigned int snd_SendIOPCommandAndWait(/* s2 18 */ int command, /* s0 16 */ int data_size, /* a3 7 */ char *data) {
     /* a1 5 */ int x;
     /* s0 16 */ unsigned int ret_val;
@@ -647,7 +655,7 @@ void snd_SendCurrentBatch();
         gCaching = 1;
     }
 
-    SndCommandEntryPtr cmd = &gSndCommandBuffePtr[gCommandFillBuffer]->buffer[4096 - gCommandBuffeBytesAvail[gCommandFillBuffer]];
+    SndCommandEntryPtr cmd = &gSndCommandBuffePtr[gCommandFillBuffer]->buffer[4092 - gCommandBuffeBytesAvail[gCommandFillBuffer]];
     cmd->command = command;
     cmd->size = msg_size;
 
@@ -655,7 +663,7 @@ void snd_SendCurrentBatch();
         // TODO
         UNIMPLEMENTED();
     } else {
-        memcpy(((char *)&cmd) + sizeof(*cmd), data, msg_size);
+        memcpy((char *)&cmd[1], data, msg_size);
     }
 
     gCommandBuffeBytesAvail[gCommandFillBuffer] -= msg_size;

@@ -865,21 +865,17 @@
         size = entry->size;
         command_buffer_walk += sizeof(struct SndCommandEntry);
 
-        // not?
-        //if (!IS_ALIGNED(size, 4)) {
-        //    size = ALIGN(size, 4);
-        //}
-
+        // what is this
         if ((size & 3) != 0) {
             size = 4 - -4 * (size / 4);
         }
 
         gCommandFunc[command](command_buffer_walk);
         command_buffer_walk += size;
-        gWriteBackdataOffset += 4;
+        gWriteBackdataOffset++;
     }
 
-    gWriteBackdataOffset -= 4;
+    gWriteBackdataOffset--;
 }
 
 /* 00003120 000031c8 */ static void *snd_EEMessageParser(/* 0x0(sp) */ UInt32 command, /* 0x4(sp) */ void *data, /* 0x8(sp) */ SInt32 size) {

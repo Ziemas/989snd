@@ -8,12 +8,15 @@
 
 EE_LIB = 989snd.a
 EE_OBJS = ee/989snd.o
-EE_INCS = -I./common/
-EE_LIBS = -ldebug -lgs
+EE_INCS = -I./common/ -I$(PS2DEV)/gsKit/include
+EE_LIBS = -ldebug
 EE_CFLAGS += -Wall -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -std=c99 -O3
 
-TEST_OBJS = ee/main.o
+TEST_OBJS = $(EE_OBJS) ee/main.o
 TEST_EXE = test.elf
+TEST_LIBS = $(EE_LIBS) -lgskit -ldmakit -lgskit_toolkit -lpng -lz
+TEST_CFLAGS = $(EE_CFLAGS)
+TEST_LDFLAGS = $(EE_LDFLAGS) -L$(PS2DEV)/gsKit/lib -L$(PS2SDK)/ports/lib
 
 IOP_BIN = 989snd.irx
 IOP_OBJS = iop/989snd.o iop/ame.o iop/autopan.o iop/autopb.o iop/autoptch.o \
@@ -33,7 +36,7 @@ all: $(IOP_BIN) $(EE_LIB) $(TEST_EXE)
 
 $(TEST_EXE): $(EE_OBJS) $(TEST_OBJS)
 	$(DIR_GUARD)
-	$(EE_CC) -T$(EE_LINKFILE) $(EE_OPTFLAGS) -o $(TEST_EXE) $(EE_OBJS) $(TEST_OBJS) $(EE_LDFLAGS) $(EXTRA_LDFLAGS) $(EE_LIBS)
+	$(EE_CC) -T$(EE_LINKFILE) $(EE_OPTFLAGS) -o $(TEST_EXE) $(TEST_OBJS) $(TEST_LDFLAGS) $(EXTRA_LDFLAGS) $(TEST_LIBS)
 
 clean:
 	rm -f $(IOP_BIN) $(IOP_OBJS) $(EE_LIB) $(EE_OBJS)

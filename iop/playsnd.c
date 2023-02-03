@@ -599,30 +599,7 @@
     /* -0x1c(sp) */ SInt32 count = 0;
     /* -0x18(sp) */ SFXBlock2Ptr walk;
 
-    if (block != NULL) {
-        if (block->DataID != SBLK_ID || (block->Flags & 0x100) == 0) {
-            return -1;
-        }
-        snd_names = (SFXNamePtr)block->BlockNames->SFXNameTableOffset;
-        index = block->BlockNames->SFXHashOffsets[snd_CalcSoundNameHash(name)];
-        while (snd_names[index].Name[0] != 0) {
-            buffer = (UInt32 *)name;
-            if (snd_names[index].Name[0] == buffer[0] &&
-                snd_names[index].Name[1] == buffer[1] &&
-                snd_names[index].Name[2] == buffer[2] &&
-                snd_names[index].Name[3] == buffer[3]) {
-                break;
-            }
-
-            index++;
-        }
-
-        if (found_block != NULL) {
-            *found_block = block;
-        }
-
-        return snd_names[index].Index;
-    } else {
+    if (block == NULL) {
         for (walk = gBlockListHead; walk != NULL; walk = walk->NextBlock) {
             index = snd_FindSoundByName(walk, name, found_block);
             if (index >= 0) {
@@ -633,6 +610,35 @@
 
         return -1;
     }
+
+    if (block->DataID != SBLK_ID || (block->Flags & 0x100) == 0) {
+        return -1;
+    }
+
+    snd_names = (SFXNamePtr)block->BlockNames->SFXNameTableOffset;
+    index = block->BlockNames->SFXHashOffsets[snd_CalcSoundNameHash(name)];
+    buffer = (UInt32 *)name;
+
+    while (true) {
+        if (snd_names[index].Name[0] == 0) {
+            return -1;
+        }
+
+        if (snd_names[index].Name[0] == buffer[0] &&
+            snd_names[index].Name[1] == buffer[1] &&
+            snd_names[index].Name[2] == buffer[2] &&
+            snd_names[index].Name[3] == buffer[3]) {
+            break;
+        }
+
+        index++;
+    }
+
+    if (found_block != NULL) {
+        *found_block = block;
+    }
+
+    return snd_names[index].Index;
 }
 
 /* 0001c300 0001c3e0 */ SInt32 snd_CalcSoundNameHash(/* 0x0(sp) */ char *name) {
