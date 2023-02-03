@@ -893,7 +893,7 @@
     /* -0x68(sp) */ sceSifQueueData qd;
     /* -0x50(sp) */ sceSifServeData sd;
 
-    *(SInt32 *)snd_MESSAGE_RECIEVE_BUFFER = -1;
+    *(SInt32 *)snd_MESSAGE_RETURN_BUFFER = -1;
     sceSifInitRpc(0);
     sceSifSetRpcQueue(&qd, GetThreadId());
     sceSifRegisterRpc(&sd, 0x123456, (void *(*)(int, void *, int))snd_EEMessageParser, snd_MESSAGE_RECIEVE_BUFFER, NULL, NULL, &qd);

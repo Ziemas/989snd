@@ -193,16 +193,15 @@ void snd_SendCurrentBatch();
         return 0;
     }
 
-    if (*gCommBusy == -1 && gCommBusy[gAwaitingInts + 1] == -1) {
-        gCommBusy = NULL;
-        return 1;
+    if (gCommBusy[0] != -1 || gCommBusy[gAwaitingInts + 1] != -1) {
+        if (!gPrefs_Silent) {
+            printf("989snd.c: Sif says RPC isn\'t busy, but we still don\'t have returns from  the IOP!\n");
+        }
+        return 0;
     }
 
-    if (!gPrefs_Silent) {
-        printf("989snd.c: Sif says RPC isn\'t busy, but we still don\'t have returns from  the IOP!\n");
-    }
-
-    return 0;
+    gCommBusy = NULL;
+    return 1;
 }
 
 /* 001aae68 001aaecc */ void snd_PrepareReturnBuffer(/* s0 16 */ unsigned int *buffer, /* a1 5 */ int num_ints) {
@@ -216,7 +215,44 @@ void snd_SendCurrentBatch();
 
 /* 001aaed0 001ab06c */ SoundBankPtr snd_BankLoad(/* s3 19 */ char *name, /* v0 2 */ int offset) {
     gLocalLoadError = 0;
-    UNIMPLEMENTED();
+
+    if (gLoadBusy) {
+        printf("snd_BankLoad: Load already in progress!\n");
+        return NULL;
+    }
+
+    *(int *)&gSyncStringBuffer[0] = offset;
+    strcpy(&gSyncStringBuffer[4], name);
+    gLoadReturnValue[0] = -1;
+    SyncDCache(gLoadReturnValue, gLoadReturnValue + sizeof(gLoadReturnValue));
+    while (SifCheckStatRpc(&gSLClientLoaderData)) {
+        if (!gPrefs_Silent) {
+            printf("989snd.c: RPC collision!\n");
+        }
+        snd_FlushSoundCommands();
+        FlushCache(0);
+    }
+
+    if (SifCallRpc(&gSLClientLoaderData,
+                   SL_LOADBANK,
+                   SIF_RPC_M_NOWAIT,
+                   gSyncStringBuffer,
+                   strlen(name) + 5,
+                   gLoadReturnValue,
+                   sizeof(gLoadReturnValue),
+                   NULL, NULL) < 0) {
+        if (!gPrefs_Silent) {
+            printf("989snd.c: RPC call has failed inside snd_BankLoad\n");
+        }
+        gLocalLoadError = 0x106;
+        return NULL;
+    }
+
+    while (gLoadReturnValue[0] == -1) {
+        FlushCache(WRITEBACK_DCACHE);
+    }
+
+    return (SoundBankPtr)gLoadReturnValue[0];
 }
 
 /* 001ab070 001ab18c */ int snd_BankLoad_CB(/* s3 19 */ char *name, /* s5 21 */ int offset, /* s2 18 */ SndCompleteProc cb, /* s4 20 */ unsigned long long user_data) {
@@ -356,13 +392,13 @@ void snd_SendCurrentBatch();
     UNIMPLEMENTED();
 }
 /* 001ac518 001ac53c */ unsigned int snd_PlaySoundEx(/* a0 4 */ SndPlayParamsPtr params) {
-    UNIMPLEMENTED();
+    return snd_SendIOPCommandAndWait(SL_PLAYSOUNDEX, sizeof(*params), params);
 }
 /* 001ac540 001ac56c */ void snd_PlaySoundEx_A(/* a0 4 */ SndPlayParamsPtr params) {
-    UNIMPLEMENTED();
+    snd_SendIOPCommandNoWait(SL_PLAYSOUNDEX, sizeof(*params), params, NULL, 0);
 }
 /* 001ac570 001ac59c */ void snd_PlaySoundEx_CB(/* a0 4 */ SndPlayParamsPtr params, /* a1 5 */ SndCompleteProc cb, /* t0 8 */ unsigned long long user_data) {
-    UNIMPLEMENTED();
+    snd_SendIOPCommandNoWait(SL_PLAYSOUNDEX, sizeof(*params), params, cb, user_data);
 }
 /* 001ac5a0 001ac5d0 */ void snd_StopSound(/* -0x20(sp) */ unsigned int handle) {
     UNIMPLEMENTED();
@@ -512,7 +548,42 @@ void snd_SendCurrentBatch();
 /* 001ace50 001ad0a8 */ unsigned int snd_SendIOPCommandAndWait(/* s2 18 */ int command, /* s0 16 */ int data_size, /* a3 7 */ char *data) {
     /* a1 5 */ int x;
     /* s0 16 */ unsigned int ret_val;
-    UNIMPLEMENTED();
+    if (command == SL_EXTERNCALLWITHDATA) {
+        UNIMPLEMENTED();
+    } else {
+        memcpy(gSyncSendBuffer, data, data_size);
+    }
+
+    while (gCommBusy) {
+        snd_FlushSoundCommands();
+        FlushCache(WRITEBACK_DCACHE);
+    }
+
+    snd_PrepareReturnBuffer(gSyncBuffer, 1);
+    while (SifCheckStatRpc(&gSLClientData)) {
+        if (!gPrefs_Silent) {
+            printf("989snd.c: RPC collision!\n");
+        }
+
+        snd_FlushSoundCommands();
+        FlushCache(WRITEBACK_DCACHE);
+    }
+
+    if (data_size != 0) {
+        SifCallRpc(&gSLClientData, command, SIF_RPC_M_NOWAIT, gSyncSendBuffer, data_size, gSyncBuffer, sizeof(gSyncBuffer), NULL, NULL);
+    } else {
+        SifCallRpc(&gSLClientData, command, SIF_RPC_M_NOWAIT, NULL, 0, gSyncBuffer, sizeof(gSyncBuffer), NULL, NULL);
+    }
+
+    while (!snd_GotReturns()) {
+    }
+    ret_val = gSyncBuffer[1];
+
+    if (gSndCommandBuffePtr[gCommandFillBuffer]->num_commands != 0 && !gCaching) {
+        snd_SendCurrentBatch();
+    }
+
+    return ret_val;
 }
 
 /* 001ad0a8 001ad428 */ void snd_SendIOPCommandNoWait(/* s7 23 */ int command, /* s0 16 */ int data_size, /* s5 21 */ char *data, /* -0xc0(sp) */ SndCompleteProc done, /* -0xb8(sp) */ unsigned long long u_data) {
@@ -601,14 +672,14 @@ void snd_SendCurrentBatch();
 /* 001ad468 001ad5b0 */ void snd_SendCurrentBatch() {
     snd_PrepareReturnBuffer(gReturnValuesPtr[gCommandFillBuffer], gSndCommandBuffePtr[gCommandFillBuffer]->num_commands);
     while (SifCheckStatRpc(&gSLClientData) != 0) {
-        if (gPrefs_Silent == 0) {
+        if (!gPrefs_Silent) {
             printf("989snd.c: RPC collision!\n");
         }
         FlushCache(0);
     }
     SifCallRpc(&gSLClientData,
                SL_COMMAND_BATCH,
-               1,
+               SIF_RPC_M_NOWAIT,
                gSndCommandBuffePtr[gCommandFillBuffer],
                0x1000 - gCommandBuffeBytesAvail[gCommandFillBuffer],
                gReturnValuesPtr[gCommandFillBuffer],

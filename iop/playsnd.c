@@ -131,7 +131,7 @@
 
     if (index < 0) {
         if (!gPrefs_Silent && gPrefs_ShowMissingSounds) {
-            printf("989snd: Didn't find sound named -> %s\n", index);
+            printf("989snd: Didn't find sound named -> %s\n", params->snd_spec.name);
         }
 
         return 0;
