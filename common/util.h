@@ -3,6 +3,9 @@
 
 #include "stdio.h"
 
+#define IS_ALIGNED(x, y) (((x) & ((y)-1)) == 0)
+#define ALIGN(x, y) ((x) + (y) - ((x) & ((y)-1)))
+
 #define UNIMPLEMENTED()                                             \
     do {                                                            \
         printf("UNIMPLEMENTED FUNCTION %s\n", __PRETTY_FUNCTION__); \

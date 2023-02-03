@@ -9,6 +9,8 @@
 EE_LIB = 989snd.a
 EE_OBJS = ee/989snd.o
 EE_INCS = -I./common/
+EE_LIBS = -ldebug -lgs
+EE_CFLAGS += -Wall -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -std=c99 -O3
 
 TEST_OBJS = ee/main.o
 TEST_EXE = test.elf

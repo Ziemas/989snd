@@ -2,6 +2,7 @@
 #include "989snd.h"
 #include "stdio.h"
 #include "types.h"
+#include "util.h"
 
 enum {
     NUM_SRAM_NODE = 129,

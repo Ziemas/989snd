@@ -6,6 +6,7 @@
 #include "autoverb.h"
 #include "autovol.h"
 #include "blocksnd.h"
+#include "common.h"
 #include "extern.h"
 #include "init.h"
 #include "loader.h"
@@ -18,6 +19,7 @@
 #include "stick.h"
 #include "stream.h"
 #include "types.h"
+#include "util.h"
 #include "valloc.h"
 #include "vol.h"
 
@@ -862,6 +864,11 @@
         command = entry->command;
         size = entry->size;
         command_buffer_walk += sizeof(struct SndCommandEntry);
+
+        // not?
+        //if (!IS_ALIGNED(size, 4)) {
+        //    size = ALIGN(size, 4);
+        //}
 
         if ((size & 3) != 0) {
             size = 4 - -4 * (size / 4);

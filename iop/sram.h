@@ -2,8 +2,6 @@
 #define SRAM_H_
 
 #include "types.h"
-#define IS_ALIGNED(x, y) (((x) & ((y)-1)) == 0)
-#define ALIGN(x, y) ((x) + (y) - ((x) & ((y)-1)))
 
 void snd_SRAMInitMalloc();
 
