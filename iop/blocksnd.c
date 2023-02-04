@@ -548,7 +548,8 @@
     /* -0x18(sp) */ struct LFOTracker *lfo;
     /* -0x14(sp) */ SInt32 index;
     /* -0x10(sp) */ LFOParams *lfop;
-    lfop = handler->block->GrainData + (grain->OpcodeData.Opcode &= 0xFFFFFF);
+
+    lfop = handler->block->GrainData + (grain->OpcodeData.Opcode & 0xFFFFFF);
     index = lfop->which_lfo;
     lfo = &handler->lfo[index];
 
@@ -1074,7 +1075,7 @@
             stop_sound = 1;
         }
     } else {
-        handler->CountDown = grain->Delay + ret;
+        handler->CountDown = sfx->FirstGrain[handler->NextGrain].Delay + ret;
     }
 
     return stop_sound;
