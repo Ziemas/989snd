@@ -404,9 +404,11 @@ void snd_SendCurrentBatch();
 /* 001ac570 001ac59c */ void snd_PlaySoundEx_CB(/* a0 4 */ SndPlayParamsPtr params, /* a1 5 */ SndCompleteProc cb, /* t0 8 */ unsigned long long user_data) {
     snd_SendIOPCommandNoWait(SL_PLAYSOUNDEX, sizeof(*params), params, cb, user_data);
 }
+
 /* 001ac5a0 001ac5d0 */ void snd_StopSound(/* -0x20(sp) */ unsigned int handle) {
-    UNIMPLEMENTED();
+    snd_SendIOPCommandNoWait(SL_STOPSOUND, sizeof(handle), &handle, NULL, 0);
 }
+
 /* 001ac5d0 001ac60c */ int snd_GetSoundUserData(/* a0 4 */ SoundBankPtr bank, /* v0 2 */ unsigned long long bank_name, /* a2 6 */ int sound_index, /* a3 7 */ unsigned __int128 sound_name, /* t0 8 */ int *destination) {
     /* -0x40(sp) */ GetSoundUserDataCommandStruct ud;
     UNIMPLEMENTED();
@@ -617,7 +619,7 @@ void snd_SendCurrentBatch();
         }
     }
 
-    msg_size = data_size + 4;
+    msg_size = data_size + sizeof(SndCommandEntry);
     if (!IS_ALIGNED(msg_size, 4)) {
         msg_size = ALIGN(msg_size, 4);
     }
@@ -657,7 +659,7 @@ void snd_SendCurrentBatch();
 
     SndCommandEntryPtr cmd = &gSndCommandBuffePtr[gCommandFillBuffer]->buffer[4092 - gCommandBuffeBytesAvail[gCommandFillBuffer]];
     cmd->command = command;
-    cmd->size = msg_size;
+    cmd->size = data_size;
 
     if (command == SL_EXTERNCALLWITHDATA) {
         // TODO

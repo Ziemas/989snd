@@ -18,16 +18,27 @@ static u64 white = GS_SETREG_RGBAQ(0xFF, 0xFF, 0xFF, 0x80, 0x00);
 
 struct Sound {
     bool in_use;
-    u32 id;
+    u32 handle;
     u32 index;
+    s32 timer;
 };
 
 struct Sound sounds[64];
+
+static void print_bytes(char *buf) {
+    for (int i = 0; i < 64; i++) {
+        printf(" %02x", buf[i]);
+        if ((i + 1) % 8 == 0)
+            printf("\n");
+    }
+    printf("\n");
+}
 
 static struct Sound *get_free_sound() {
     for (int i = 0; i < 64; i++) {
         if (!sounds[i].in_use) {
             sounds[i].in_use = true;
+            sounds[i].timer = 200;
             return &sounds[i];
         }
     }
@@ -37,7 +48,7 @@ static struct Sound *get_free_sound() {
 
 static void snd_play_return(unsigned ret_val, unsigned long long u_data) {
     struct Sound *sound = (struct Sound *)u_data;
-    sound->id = ret_val;
+    sound->handle = ret_val;
     if (ret_val == 0) {
         sound->in_use = 0;
         sound->index = 0;
@@ -46,8 +57,11 @@ static void snd_play_return(unsigned ret_val, unsigned long long u_data) {
 
 static void refresh_sound_list() {
     for (int i = 0; i < 64; i++) {
-        if (sounds[i].id != 0) {
-            snd_SoundIsStillPlaying_CB(sounds[i].id, snd_play_return, (unsigned long)&sounds[i]);
+        if (sounds[i].handle != 0) {
+            snd_SoundIsStillPlaying_CB(sounds[i].handle, snd_play_return, (unsigned long)&sounds[i]);
+            if (sounds[i].timer-- <= 0) {
+                snd_StopSound(sounds[i].handle);
+            }
         }
     }
 }
@@ -62,7 +76,7 @@ static void init_iop() {
 
     SifLoadModule("host0:data/LIBSD.IRX", 0, NULL);
     // SifLoadModule("host0:data/989SND_D.IRX", 0, NULL);
-    //    SifLoadModule("host0:iop/989SND_j2.IRX", 0, NULL);
+    //     SifLoadModule("host0:iop/989SND_j2.IRX", 0, NULL);
     SifLoadModule("host0:989snd.irx", 0, NULL);
     // SifLoadModule("rom0:SIO2MAN", 0, NULL);
     // SifLoadModule("rom0:PADMAN", 0, NULL);
@@ -95,11 +109,11 @@ static void draw_sound_list(int x, int y) {
     gsKit_prim_line(gsGlobal, x, y, x, y + 400, 0, white);
 
     for (int i = 0, p = 0; p < 27 && i < 64; i++) {
-        if (sounds[i].id == 0) {
+        if (sounds[i].handle == 0) {
             continue;
         }
 
-        snprintf(buff, sizeof(buff), "%08x - %d", sounds[i].id, sounds[i].index);
+        snprintf(buff, sizeof(buff), "%08x - %d", sounds[i].handle, sounds[i].index);
         gsKit_font_print(gsGlobal, gsFont, x + off_x, y + off_y, 2, white, buff);
         p++;
         off_y += 15;
@@ -123,6 +137,8 @@ static void play_sound(SoundBankPtr bank, int index) {
 };
 
 int main(int argc, char *argv[]) {
+    char buff[32];
+
     init_screen();
     init_iop();
     SoundBankPtr bank = snd_BankLoad("host0:data/COMMON.SBK", 0);
@@ -133,10 +149,11 @@ int main(int argc, char *argv[]) {
         gsKit_clear(gsGlobal, GS_SETREG_RGBAQ(0, 0, 0, 0, 0));
         gsKit_font_print(gsGlobal, gsFont, 10, 10, 2, white, "989play");
 
-        timer--;
-        if (!timer) {
+        snprintf(buff, sizeof(buff), "playing sound %d", sound);
+        gsKit_font_print(gsGlobal, gsFont, 40, 40, 2, white, buff);
+        if (!timer--) {
             play_sound(bank, sound++);
-            timer = 80;
+            timer = 40;
         }
 
         draw_sound_list(430, 10);

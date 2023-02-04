@@ -863,6 +863,7 @@
         SndCommandEntryPtr entry = (SndCommandEntryPtr)command_buffer_walk;
         command = entry->command;
         size = entry->size;
+
         command_buffer_walk += sizeof(struct SndCommandEntry);
 
         // what is this
