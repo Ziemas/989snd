@@ -62,10 +62,7 @@ SInt32 snd_AutoVolHandler(BasicEffectPtr effect, GSoundHandlerPtr handler);
                 return;
             }
 
-            delta_time = volchange * delta_time / wouldhavechanged;
-            if (delta_time < 0) {
-                delta_time = -delta_time;
-            }
+            delta_time = abs(volchange * delta_time / wouldhavechanged);
             if (delta_time <= 0) {
                 delta_time = 1;
             }
@@ -82,23 +79,12 @@ SInt32 snd_AutoVolHandler(BasicEffectPtr effect, GSoundHandlerPtr handler);
         new_effect = 1;
     }
 
-    // how to do without this ternary?
-    s32 tmp;
-    tmp = volchange;
-    if (volchange < 0) {
-        tmp = -volchange;
-    }
-
-    if (tmp >= delta_time) {
+    if (abs(volchange) >= delta_time) {
         effect->delta_value = 32 * volchange / delta_time;
         effect->ec.delta_type = 0;
         effect->ec.delta_counter = 0;
     } else {
-        tmp = delta_time / volchange;
-        if (delta_time / volchange < 0) {
-            tmp = -tmp;
-        }
-        effect->delta_time = tmp;
+        effect->delta_time = abs(delta_time / volchange);
         effect->ec.delta_type = 1;
         effect->ec.delta_counter = effect->delta_time;
         if (vol >= handler->Current_Vol) {
@@ -127,19 +113,12 @@ SInt32 snd_AutoVolHandler(BasicEffectPtr effect, GSoundHandlerPtr handler);
     /* -0x10(sp) */ SInt16 newMvol;
     /* -0xe(sp) */ SInt16 stopit = 0;
 
-    // don't see how to do without this
-    SInt32 tmp;
-
     if (effect->destination == -4) {
         effect->destination = 0;
         stopit = 1;
     }
 
-    tmp = effect->delta_value;
-    if (tmp < 0) {
-        tmp = -tmp;
-    }
-    if (tmp < 2) {
+    if (abs(effect->delta_value) < 2) {
         newMvol = handler->Current_Vol + effect->delta_value;
     } else {
         newMvol = (32 * handler->Current_Vol + effect->delta_value) >> 5;
