@@ -59,12 +59,15 @@ void snd_ActivateHandler(GSoundHandlerPtr snd);
 void snd_DeactivateHandler(GSoundHandlerPtr snd, SInt32 and_child);
 
 SInt32 snd_UpdateEffect(EffectChainPtr effect, GSoundHandlerPtr owner);
+void snd_RemoveEffect(GSoundHandlerPtr handler, SInt32 type_flag);
 
 void snd_AttachSoundToHandlersChildList(GSoundHandlerPtr handler, UInt32 id);
 GSoundHandlerPtr snd_CheckHandlerStillActive(UInt32 handle);
 
 void snd_FreeEffectChain(EffectChainPtr effect);
 EffectChainPtr snd_FindEffect(GSoundHandlerPtr handler, SInt32 type_flag);
+BasicEffectPtr snd_GetFreeBasicEffect();
+void snd_AddEffectToHandler(GSoundHandlerPtr handler, EffectChainPtr effect);
 
 void snd_RemoveEffectFromHandler(GSoundHandlerPtr handler, EffectChainPtr effect);
 void snd_PauseHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child);
