@@ -1320,7 +1320,6 @@
 /* 00014a60 00014b00 */ MIDIBlockHeaderPtr snd_FindMIDIBlock(/* 0x0(sp) */ UInt32 id) {
     /* -0x10(sp) */ MIDIBlockHeaderPtr walk;
     for (walk = gMIDIListHead; walk != NULL; walk = walk->NextMIDIBlock) {
-        printf("walk %p, id %d (search %d)\n", walk, walk->ID, id);
         if (walk->ID == id) {
             break;
         }

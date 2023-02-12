@@ -25,6 +25,8 @@ enum SFX_FLAG {
     SFX_INSTLIMIT = 0x8,
     SFX_INSTLIMIT_VOL = 0x10,
     SFX_INSTLIMIT_TICK = 0x20,
+
+    SFX_BRANCH_TARGET = 0x4000,
 };
 
 enum NUM_HANDLERS {
@@ -45,6 +47,9 @@ void snd_UpdateHandlers();
 
 void snd_StopHandlerPtr(GSoundHandlerPtr snd, SInt32 and_child, SInt32 silence, bool vlimit_stop);
 void snd_StopAllHandlersForSound(SoundPtr snd, SInt32 silence, bool vlimit_stop);
+bool snd_KillChildrenWithSound(GSoundHandlerPtr handler, void *sfx);
+
+bool snd_CheckInstanceLimit(SFX2 *sfx, SInt32 vol, bool parent, BlockSoundHandlerPtr *weakest_holder);
 
 BlockSoundHandlerPtr snd_GetFreeBlockSoundHandler(SFX2 *sfx, SInt32 vol, bool parent);
 MIDIHandlerPtr snd_GetFreeMIDIHandler();
