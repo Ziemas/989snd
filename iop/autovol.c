@@ -82,7 +82,7 @@ SInt32 snd_AutoVolHandler(BasicEffectPtr effect, GSoundHandlerPtr handler);
         new_effect = 1;
     }
 
-    // how to do without this
+    // how to do without this ternary?
     s32 tmp;
     tmp = volchange;
     if (volchange < 0) {

@@ -3,6 +3,10 @@
 
 #include "stdio.h"
 
+#define abs(x) ((x) < 0 ? -(x) : (x))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
 #define IS_ALIGNED(x, y) (((x) & ((y)-1)) == 0)
 #define ALIGN(x, y) ((x) + (y) - ((x) & ((y)-1)))
 

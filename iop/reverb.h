@@ -4,6 +4,8 @@
 #include "types.h"
 
 extern SInt32 gReverbMode;
+extern SInt16 gReverbDepthL[2];
+extern SInt16 gReverbDepthR[2];
 
 void snd_CheckVerb();
 
