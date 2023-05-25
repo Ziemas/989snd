@@ -24,10 +24,10 @@ IOP_OBJS = iop/989snd.o iop/ame.o iop/autopan.o iop/autopb.o iop/autoptch.o \
 			iop/init.o iop/intr_code.o iop/LFO.o iop/loader.o iop/midi.o \
 			iop/moviesnd.o iop/my_rand.o iop/pantable.o iop/playsnd.o \
 			iop/reverb.o iop/sndhand.o iop/sram.o iop/stick.o iop/stream.o \
-			iop/valloc.o iop/vol.o iop/error.o
+			iop/valloc.o iop/vol.o iop/error.o imports.o
 IOP_LIBS =
-IOP_TABS = stdio.tab libsd.tab ioman.tab thbase.tab sysmem.tab sysclib.tab \
-			sifcmd.tab sifman.tab intrman.tab thsemap.tab cdvdman.tab timrman.tab
+#IOP_TABS = stdio.tab libsd.tab ioman.tab thbase.tab sysmem.tab sysclib.tab \
+#			sifcmd.tab sifman.tab intrman.tab thsemap.tab cdvdman.tab timrman.tab
 IOP_CFLAGS += -Wall -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -std=c99 -Os
 IOP_CFLAGS += -DINTERNAL_SNDERR
 IOP_INCS = -I./common/
