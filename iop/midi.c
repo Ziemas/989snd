@@ -469,7 +469,7 @@
         }
 
         snd_MakeVolumesB(stream->SH.Current_Vol,
-                         walk->OwnerData.MIDIData.KeyOnVelocity * stream->Vol[walk->OwnerData.MIDIData.MidiChannel],
+                         walk->OwnerData.MIDIData.KeyOnVelocity * stream->Vol[walk->OwnerData.MIDIData.MidiChannel] / 127,
                          pan_calc,
                          walk->OwnerData.MIDIData.KeyOnProg->Vol,
                          walk->OwnerData.MIDIData.KeyOnProg->Pan,
