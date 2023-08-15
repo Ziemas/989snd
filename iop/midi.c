@@ -454,7 +454,7 @@
 
     if (pan == -1) {
         stream->SH.Current_Pan = stream->SH.Sound->Pan;
-    } else if (pan == -2) {
+    } else if (pan != -2) {
         stream->SH.Current_Pan = pan;
     }
 
