@@ -27,7 +27,7 @@
         core1mode &= ~3;
     }
 
-    sceSdSetParam(SD_PARAM_MMIX, core1mode);
+    sceSdSetParam(SD_PARAM_MMIX | 1, core1mode);
 }
 
 /* 0001c980 0001c9f8 */ void snd_PreAllocReverbWorkArea(/* 0x0(sp) */ UInt32 core, /* 0x4(sp) */ SInt32 type) {
