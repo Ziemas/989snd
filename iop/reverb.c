@@ -197,7 +197,7 @@
     /* -0x10(sp) */ SInt32 intr_state;
     /* -0xc(sp) */ SInt32 dis;
     gReverbDepthL[core] = left;
-    gReverbDepthL[core] = right;
+    gReverbDepthR[core] = right;
     if (gAwaitingReverbChange[core] == 0) {
         dis = CpuSuspendIntr(&intr_state);
         sceSdSetParam(SD_PARAM_EVOLL | core, gReverbDepthL[core]);
