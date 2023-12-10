@@ -579,7 +579,7 @@
     /* -0xc(sp) */ UInt32 *comp = (UInt32 *)name;
 
     for (; walk != NULL; walk = walk->NextBlock) {
-        if ((walk->Flags & 0x100) == 0) {
+        if ((walk->Flags & BLOCK_HAS_NAMES) == 0) {
             continue;
         }
 
@@ -611,7 +611,7 @@
         return -1;
     }
 
-    if (block->DataID != SBLK_ID || (block->Flags & 0x100) == 0) {
+    if (block->DataID != SBLK_ID || (block->Flags & BLOCK_HAS_NAMES) == 0) {
         return -1;
     }
 

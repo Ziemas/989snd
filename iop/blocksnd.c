@@ -385,10 +385,12 @@
         handler->SH.Voices.core[1] = 0;
         handler->SH.Voices.core[0] = 0;
         handler->NextGrain = stop_index + 1;
+
         if (vlimit_stop) {
-            handler->SH.flags |= 0x20;
+            handler->SH.flags |= HND_VLIMIT;
         }
-        while (!stop_sound && handler->NextGrain != 1) {
+
+        while (!stop_sound && handler->NextGrain != -1) {
             stop_sound = snd_DoGrain(handler);
         }
 
@@ -397,7 +399,7 @@
         if (handler->SH.Voices.core[1] != 0 ||
             handler->SH.Voices.core[1] != 0 ||
             handler->SH.first_child != NULL) {
-            return 1;
+            return true;
         }
     }
 
@@ -438,7 +440,7 @@
     /* -0x10(sp) */ SInt32 core;
     /* -0xc(sp) */ SInt32 c_v;
 
-    if ((handler->SH.flags & 0x20) != 0) {
+    if ((handler->SH.flags & HND_VLIMIT) != 0) {
         return 0;
     }
 

@@ -419,7 +419,7 @@
             printf("testing deactivated handler on the active list!\n");
         }
 
-        if (walk->parent == NULL && (walk->flags & HND_UNK4) == 0) {
+        if (walk->parent == NULL && (walk->flags & HND_STOPPING) == 0) {
             snd_StopHandlerPtr(walk, 1, 1, 0);
         }
     }
@@ -442,11 +442,11 @@
 
     snd_LockMasterTick(79);
     if (HND_GET_ACTIVE(snd->OwnerID)) {
-        if ((snd->flags & HND_UNK4) != 0) {
+        if ((snd->flags & HND_STOPPING) != 0) {
             kill_block_sound = true;
             and_child = 1;
         }
-        snd->flags |= HND_UNK4;
+        snd->flags |= HND_STOPPING;
 
         if (and_child && snd->first_child != NULL) {
             for (walk = snd->first_child; walk != NULL; walk = walk->siblings) {
